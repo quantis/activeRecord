@@ -58,11 +58,43 @@
         protected $_class_name;
 
         /**
+         * Constructs a wrapper for a table.  Called by Model instances.
+         */
+        public function __construct($table_name) {
+          self::_setup_db();
+          parent::__construct($table_name);
+          
+          // Until find_one or find_many are called, this object is considered a new row
+          $this->create();
+        }
+
+        /**
          * Set the name of the class which the wrapped
          * methods should return instances of.
          */
         public function set_class_name($class_name) {
             $this->_class_name = $class_name;
+        }
+        
+        /**
+         * Start a transaction on the database (if supported)
+         */
+        public static function start_transaction() {
+          self::$_db->beginTransaction();
+        }
+        
+        /**
+         * Commits a transaction on the database (if supported)
+         */
+        public static function commit() {
+          self::$_db->commit();
+        }
+        
+        /**
+         * Commits a transaction on the database (if supported)
+         */
+        public static function rollback() {
+          self::$_db->rollBack();
         }
 
         /**
@@ -84,55 +116,61 @@
         }
 
         /**
-         * Factory method, return an instance of this
-         * class bound to the supplied table name.
+         * Rewrite Idiorm's for_table factory so it returns models of the
+         * actual $_class_name
          */
-        public static function for_table($table_name) {
+        private function _for_table($table_name) {
             self::_setup_db();
-            return new self($table_name);
+            return new $this->_class_name();
         }
 
         /**
-         * Wrap Idiorm's find_one method to return
-         * an instance of the class associated with
-         * this wrapper instead of the raw ORM class.
+         * Mostly for convenience in chaining.
+         */
+        public function not_new() {
+            $this->_is_new = FALSE; 
+            return $this;
+        }
+
+        /**
+         * Override Idiorm's find_one method to return
+         * the current instance hydrated with the result.
          */
         public function find_one($id=null) {
-            $orm = parent::find_one($id);
-            if ($orm === false) {
-                return false;
+            if(!is_null($id)) {
+                $this->where_id_is($id);
             }
-            $model = new $this->_class_name();
-            $model->set_orm($orm);
-            return $model;
+            $this->limit(1);
+            $statement = $this->_run();
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+            return $result ? $this->hydrate($result)->not_new() : $this;
         }
 
         /**
-         * Wrap Idiorm's find_many method to return
-         * an array of instances of the class associated
-         * with this wrapper instead of the raw ORM class.
+         * Override Idiorm's find_many method to return
+         * an array of many instances of the current instance's
+         * class.
          */
         public function find_many() {
-            $orms = parent::find_many();
-            $models = array();
-            foreach ($orms as $orm) {
-                $model = new $this->_class_name();
-                $model->set_orm($orm);
-                $models[] = $model;
+            $statement = $this->_run();
+            $instances = array();
+            while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
+                $instances[] = $this->_for_table($this->_table_name)
+                  ->use_id_column($this->_instance_id_column)
+                  ->hydrate($row)
+                  ->not_new();
             }
-            return $models;
+            return $instances;
         }
-
+        
         /**
-         * Wrap Idiorm's create method to return an
-         * empty instance of the class associated with
-         * this wrapper instead of the raw ORM class.
+         * Did we load any rows from the last query?
+         * Since all objects
          */
-        public function create($data=null) {
-            $model = new $this->_class_name();
-            $model->set_orm(parent::create($data));
-            return $model;
+        public function loaded() {
+            return !$this->_is_new;
         }
+        
     }
 
     /**
@@ -143,7 +181,7 @@
      * }
      *
      */
-    class Model {
+    class Model extends ORMWrapper {
 
         // Default ID column for all models. Can be overridden by adding
         // a public static _id_column property to your model classes.
@@ -151,12 +189,17 @@
 
         // Default foreign key suffix used by relationship methods
         const DEFAULT_FOREIGN_KEY_SUFFIX = '_id';
-
+        
         /**
-         * The ORM instance used by this model 
-         * instance to communicate with the database.
+         * Magic function so that new operator works as expected
          */
-        public $orm;
+        public function __construct() {
+            $class_name = get_class($this);
+            $table_name = self::_get_table_name($class_name);
+            parent::__construct($table_name);
+            $this->set_class_name($class_name);
+            $this->use_id_column(self::_id_column_name($class_name));
+        }
 
         /**
          * Retrieve the value of a static property on a class. If the
@@ -199,7 +242,7 @@
          * Return the ID column name to use for this class. If it is
          * not set on the class, returns null.
          */
-        protected static function _get_id_column_name($class_name) {
+        protected static function _id_column_name($class_name) {
             return self::_get_static_property($class_name, '_id_column', self::DEFAULT_ID_COLUMN);
         }
 
@@ -220,17 +263,11 @@
          * Factory method used to acquire instances of the given class.
          * The class name should be supplied as a string, and the class
          * should already have been loaded by PHP (or a suitable autoloader
-         * should exist). This method actually returns a wrapped ORM object
-         * which allows a database query to be built. The wrapped ORM object is
-         * responsible for returning instances of the correct class when
-         * its find_one or find_many methods are called.
+         * should exist).  Basically a wrapper for new Class() to facilitate
+         * chaining.
          */
         public static function factory($class_name) {
-            $table_name = self::_get_table_name($class_name);
-            $wrapper = ORMWrapper::for_table($table_name);
-            $wrapper->set_class_name($class_name);
-            $wrapper->use_id_column(self::_get_id_column_name($class_name));
-            return $wrapper;
+            return new $class_name;
         }
 
         /**
@@ -294,8 +331,8 @@
             $join_table_name = self::_get_table_name($join_class_name);
 
             // Get ID column names
-            $base_table_id_column = self::_get_id_column_name($base_class_name);
-            $associated_table_id_column = self::_get_id_column_name($associated_class_name);
+            $base_table_id_column = self::_id_column_name($base_class_name);
+            $associated_table_id_column = self::_id_column_name($associated_class_name);
 
             // Get the column names for each side of the join table
             $key_to_base_table = self::_build_foreign_key_name($key_to_base_table, $base_table_name);
@@ -306,78 +343,5 @@
                 ->join($join_table_name, array("{$associated_table_name}.{$associated_table_id_column}", '=', "{$join_table_name}.{$key_to_associated_table}"))
                 ->where("{$join_table_name}.{$key_to_base_table}", $this->id());
         }
-
-        /**
-         * Set the wrapped ORM instance associated with this Model instance.
-         */
-        public function set_orm($orm) {
-            $this->orm = $orm;
-        }
-
-        /**
-         * Magic getter method, allows $model->property access to data.
-         */
-        public function __get($property) {
-            return $this->orm->get($property);
-        }
-
-        /**
-         * Magic setter method, allows $model->property = 'value' access to data.
-         */
-        public function __set($property, $value) {
-            $this->orm->set($property, $value);
-        }
-
-        /**
-         * Getter method, allows $model->get('property') access to data
-         */
-        public function get($property) {
-            return $this->orm->get($property);
-        }
-
-        /**
-         * Setter method, allows $model->set('property', 'value') access to data.
-         */
-        public function set($property, $value) {
-            $this->orm->set($property, $value);
-        }
-
-        /**
-         * Wrapper for Idiorm's as_array method.
-         */
-        public function as_array() {
-            $args = func_get_args();
-            return call_user_func_array(array($this->orm, 'as_array'), $args);
-        }
-
-        /**
-         * Save the data associated with this model instance to the database.
-         */
-        public function save() {
-            return $this->orm->save();
-        }
-
-        /**
-         * Delete the database row associated with this model instance.
-         */
-        public function delete() {
-            return $this->orm->delete();
-        }
-
-        /**
-         * Get the database ID of this model instance.
-         */
-        public function id() {
-            return $this->orm->id();
-        }
-
-        /**
-         * Hydrate this model instance with an associative array of data.
-         * WARNING: The keys in the array MUST match with columns in the
-         * corresponding database table. If any keys are supplied which
-         * do not match up with columns, the database will throw an error.
-         */
-        public function hydrate($data) {
-            $this->orm->hydrate($data)->force_all_dirty();
-        }
+        
     }
