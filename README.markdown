@@ -78,9 +78,44 @@ Paris requires that your database tables have a unique primary key column. By de
 
 **Note** - Paris has its *own* default ID column name mechanism, and does not respect column names specified in Idiorm's configuration.
 
-### Querying ###
+### Paris' Active Record pattern ###
 
-Querying allows you to select data from your database and populate instances of your model classes. Queries start with a call to a static *factory method* on the base `Model` class that takes a single argument: the name of the model class you wish to use for your query. This factory method is then used as the start of a *method chain* which gives you full access to [Idiorm](http://github.com/j4mie/idiorm/)'s fluent query API. **See Idiorm's documentation for details of this API.**
+Each instance of your class represents a row in the database table.  For example, to create an object representing a new row in the `user` table,
+
+    $user = new User;
+    
+Properties on model objects represent columns from the database table.  You can retrieve, set, and unset them just like any other PHP variable.  However, like Idiorm, any changes made are not saved to the database until you call the `save` method.
+
+    $user->name = "Frank";
+    echo $user->name;
+    // prints "Frank"
+    $user->save();
+    // assuming id is the primary key column,
+    echo $user->id;
+    // prints the id assigned to the newly inserted row
+
+To operate on rows already in the database table the `find_one` and `find_many` methods from [Idiorm](http://github.com/j4mie/idiorm/) are available, but slightly enhanced.  Instead of returning an instance of the ORM class `find_one` loads data from the database into the current instance.  As in Idiorm, it can accept a primary key ID as its argument.  For example, 
+
+    $user = new User;
+    $user->find_one($id);
+
+Since Paris uses nearly the same [fluent interface](http://en.wikipedia.org/wiki/Fluent_interface) as Idiorm, it relies on a lot of chaining.  For this reason, a convenience *factory method* called `factory` on the base `Model` class is provided.  It takes a single argument: the name of the model class you wish to use, and immediately returns it for the purpose of chaining.
+
+    $user = Model::factory('User')->find_one($id);
+    // equivalent to the previous example.
+
+Since this `$user` object represents a row in the database, when it is modified and saved, it performs an update on the database instead of inserting a new row.
+
+    $user->name = "Fred";
+    $user->email = "fred@example.com";
+    $user->pageviews++;
+    $user->save();
+    echo $user->id;
+    // should still be the same as $id.
+
+#### Querying ####
+
+Querying allows you to select particular rows from your database to populate instances of your model class.  Query methods operate on instances of your class, chain as in [Idiorm](http://github.com/j4mie/idiorm/), and then execute when a call to `find_one` or `find_many` is performed.  Paris gives you full access to Idiorm's fluent query API.  **See [Idiorm's documentation](http://github.com/j4mie/idiorm/) for details of this API.**
 
 For example:
 
@@ -89,21 +124,41 @@ For example:
         ->where_gte('age', 20)
         ->find_many();
 
-You can also use the same shortcut provided by Idiorm when looking up a record by its primary key ID:
+This creates an array of `User` objects that can be manipulated, or an empty row if no records were found.  To find and immediately instantiate a `User` from one row only, use query methods and then `find_one` without an argument:
 
-    $user = Model::factory('User')->find_one($id);
+    $user = Model::factory('User')->where('email', 'fred@example.com')->find_one();
 
-The only differences between using Idiorm and using Paris for querying are as follows:
+To check if a row was found and loaded, use the `loaded` method.
+
+    if (!$user->loaded())
+        echo "User not found!";
+
+You may also want to retrieve a count of the number of rows returned by your query. This method behaves exactly like Idiorm's `count` method:
+
+            $count = Model::factory('User')->where_lt('age', 20)->count();
+
+This returns an integer and leaves the model instance unaffected.
+
+We should summarize differences between using Idiorm and using Paris for querying:
 
 1. You do not need to call the `for_table` method to specify the database table to use. Paris will supply this automatically based on the class name (or the `$_table` static property, if present).
 
-2. The `find_one` and `find_many` methods will return instances of *your model subclass*, instead of the base `ORM` class. Like Idiorm, `find_one` will return a single instance or `false` if no rows matched your query, while `find_many` will return an array of instances, which may be empty if no rows matched.
+2. The `find_one` and `find_many` methods will return instances of *your model subclass*, instead of the base `ORM` class. Like Idiorm, `find_one` will return a single instance if a row matches, while `find_many` will return an array of instances, which may be empty if no rows matched.
 
-3. Custom filtering, see next section.
+3. Unlike Idiorm, `find_one` does not return false if no rows matched, it returns an unloaded instance of the model.  You should always use the `loaded` method to check if a row was loaded.  This is because Paris model instances represent potentially new rows until an existing row is loaded into them via the `find_one` or `find_many` methods.  As an example:
 
-You may also retrieve a count of the number of rows returned by your query. This method behaves exactly like Idiorm's `count` method:
-
-    $count = Model::factory('User')->where_lt('age', 20)->count();
+    $user = Model::factory('User')->where('name', 'Fred')->find_one();
+    if (!$user->loaded()) {
+        // Fred doesn't yet exist in the database.
+        $user->name = "Fred";
+        $user->save();
+        // Now he does.
+    }
+    // Further operations can take place with the $user object at this point.
+    $comment = Model::factory('Comment');
+    $comment->user_id = $user->id;
+    $comment->text = $posted_comment;
+    $comment->save();
 
 ### Associations ###
 
@@ -249,58 +304,57 @@ The `has_many_through` method takes up to four arguments, which allow us to prog
 
 ### Filters ###
 
-It is often desirable to create reusable queries that can be used to extract particular subsets of data without repeating large sections of code. Paris allows this by providing a method called `filter` which can be chained in queries alongside the existing Idiorm query API. The filter method takes the name of a **public static** method on the current Model subclass as an argument. The supplied method will be called at the point in the chain where `filter` is called, and will be passed the `ORM` object as the first parameter. It should return the ORM object after calling one or more query methods on it. The method chain can then be continued if necessary.
+It is often desirable to create reusable queries that can be used to extract particular subsets of data without repeating large sections of code.  Paris allows you to do this by writing functions that extend your model class, within which you run Idiorm query builder methods on the `$this` object.  By returning `$this` from your function, you will allow your method to be chainable.
 
-It is easiest to illustrate this with an example. Imagine an application in which users can be assigned a role, which controls their access to certain pieces of functionality. In this situation, you may often wish to retrieve a list of users with the role 'admin'. To do this, add a static method called (for example) `admins` to your Model class:
+It is easiest to illustrate this with an example. Imagine an application in which users can be assigned a role, which controls their access to certain pieces of functionality. In this situation, you may often wish to retrieve a list of users with the role 'admin'. To do this, add a method called (for example) `admins` to your Model class:
 
     class User extends Model {
-        public static function admins($orm) {
-            return $orm->where('role', 'admin');
+        public function admins($orm) {
+            return $this->where('role', 'admin');
         }
     }
 
 You can then use this filter in your queries:
 
-    $admin_users = Model::factory('User')->filter('admins')->find_many();
+    $admin_users = Model::factory('User')->admins()->find_many();
 
 You can also chain it with other methods as normal:
 
     $young_admins = Model::factory('User')
-                        ->filter('admins')
+                        ->admins()
                         ->where_lt('age', 18)
                         ->find_many();
 
-#### Filters with arguments ####
-
-You can also pass arguments to custom filters. Any additional arguments passed to the `filter` method (after the name of the filter to apply) will be passed through to your custom filter as additional arguments (after the ORM instance).
-
-For example, let's say you wish to generalise your role filter (see above) to allow you to retrieve users with any role. You can pass the role name to the filter as an argument:
+Here is an example utilizing a filter method with an argument.
 
     class User extends Model {
-        public static function has_role($orm, $role) {
-            return $orm->where('role', $role);
+        public function has_role($role) {
+            return $this->where('role', $role);
         }
     }
 
-    $admin_users = Model::factory('User')->filter('has_role', 'admin')->find_many();
-    $guest_users = Model::factory('User')->filter('has_role', 'guest')->find_many();
+    $admin_users = Model::factory('User')->has_role('admin')->find_many();
+    $guest_users = Model::factory('User')->has_role('guest')->find_many();
 
-These examples may seem simple (`filter('has_role', 'admin')` could just as easily be achieved using `where('role', 'admin')`), but remember that filters can contain arbitrarily complex code - adding `raw_where` clauses or even complete `raw_query` calls to perform joins, etc. Filters provide a powerful mechanism to hide complexity in your model's query API.
+These examples may seem simple (`has_role('admin')` could just as easily be achieved using `where('role', 'admin')`), but remember that filters can contain arbitrarily complex code - adding `raw_where` clauses or even complete `raw_query` calls to perform joins, etc. Filters provide a powerful mechanism to hide complexity in your model's query API.
 
 ### Getting data from objects, updating and inserting data ###
 
-The model instances returned by your queries now behave exactly as if they were instances of Idiorm's raw `ORM` class.
+The model instances returned by your queries behave exactly as if they were instances of Idiorm's raw `ORM` class.
 
 You can access data:
 
     $user = Model::factory('User')->find_one($id);
-    echo $user->name;
+    if ($user->loaded())
+        echo $user->name;
 
 Update data and save the instance:
 
     $user = Model::factory('User')->find_one($id);
-    $user->name = 'Paris';
-    $user->save();
+    if ($user->loaded()) {
+        $user->name = 'Paris';
+        $user->save();
+    }
 
 Of course, because these objects are instances of your base model classes, you can also call methods that you have defined on them:
 
@@ -311,12 +365,21 @@ Of course, because these objects are instances of your base model classes, you c
     }
 
     $user = Model::factory('User')->find_one($id);
-    echo $user->full_name();
+    if ($user->loaded())
+        echo $user->full_name();
 
 To delete the database row associated with an instance of your model, call its `delete` method:
 
     $user = Model::factory('User')->find_one($id);
-    $user->delete();
+    if ($user->loaded())
+        $user->delete();
+
+To insert a database row, create a new instance of your model and save it.
+
+    $user = Model::factory('User');
+    // equivalently, $user = new User;
+    $user->name = "Frank";
+    $user->save();
 
 You can also get the all the data wrapped by a model subclass instance using the `as_array` method. This will return an associative array mapping column names (keys) to their values.
 
@@ -325,8 +388,8 @@ The `as_array` method takes column names as optional arguments. If one or more o
     class Person extends Model {
     }
 
-    $person = Model::factory('Person')->create();
-
+    $person = Model::factory('Person');
+    
     $person->first_name = 'Fred';
     $person->surname = 'Bloggs';
     $person->age = 50;
