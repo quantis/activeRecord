@@ -135,7 +135,7 @@ To check if a row was found and loaded, use the `loaded` method.
 
 You may also want to retrieve a count of the number of rows returned by your query. This method behaves exactly like Idiorm's `count` method:
 
-            $count = Model::factory('User')->where_lt('age', 20)->count();
+    $count = Model::factory('User')->where_lt('age', 20)->count();
 
 This returns an integer and leaves the model instance unaffected.
 
@@ -147,18 +147,18 @@ We should summarize differences between using Idiorm and using Paris for queryin
 
 3. Unlike Idiorm, `find_one` does not return false if no rows matched, it returns an unloaded instance of the model.  You should always use the `loaded` method to check if a row was loaded.  This is because Paris model instances represent potentially new rows until an existing row is loaded into them via the `find_one` or `find_many` methods.  As an example:
 
-    $user = Model::factory('User')->where('name', 'Fred')->find_one();
-    if (!$user->loaded()) {
-        // Fred doesn't yet exist in the database.
-        $user->name = "Fred";
-        $user->save();
-        // Now he does.
-    }
-    // Further operations can take place with the $user object at this point.
-    $comment = Model::factory('Comment');
-    $comment->user_id = $user->id;
-    $comment->text = $posted_comment;
-    $comment->save();
+        $user = Model::factory('User')->where('name', 'Fred')->find_one();
+        if (!$user->loaded()) {
+            // Fred doesn't yet exist in the database.
+            $user->name = "Fred";
+            $user->save();
+            // Now he does.
+        }
+        // Further operations can take place with the $user object at this point.
+        $comment = Model::factory('Comment');
+        $comment->user_id = $user->id;
+        $comment->text = $posted_comment;
+        $comment->save();
 
 ### Associations ###
 
