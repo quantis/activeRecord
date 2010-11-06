@@ -4,7 +4,7 @@
     *
     * Paris
     *
-    * http://github.com/j4mie/paris/
+    * http://github.com/powerpak/paris/
     *
     * A simple Active Record implementation built on top of Idiorm
     * ( http://github.com/j4mie/idiorm/ ).
@@ -15,6 +15,7 @@
     * BSD Licensed.
     *
     * Copyright (c) 2010, Jamie Matthews
+    * Modified by powerpak
     * All rights reserved.
     *
     * Redistribution and use in source and binary forms, with or without
@@ -91,28 +92,10 @@
         }
         
         /**
-         * Commits a transaction on the database (if supported)
+         * Rolls back a transaction on the database (if supported)
          */
         public static function rollback() {
           self::$_db->rollBack();
-        }
-
-        /**
-         * Add a custom filter to the method chain specified on the
-         * model class. This allows custom queries to be added
-         * to models. The filter should take an instance of the
-         * ORM wrapper as its first argument and return an instance
-         * of the ORM wrapper. Any arguments passed to this method
-         * after the name of the filter will be passed to the called
-         * filter function as arguments after the ORM class.
-         */
-        public function filter() {
-            $args = func_get_args();
-            $filter_function = array_shift($args);
-            array_unshift($args, $this);
-            if (method_exists($this->_class_name, $filter_function)) {
-                return call_user_func_array(array($this->_class_name, $filter_function), $args);
-            }
         }
 
         /**
@@ -134,7 +117,8 @@
 
         /**
          * Override Idiorm's find_one method to return
-         * the current instance hydrated with the result.
+         * the current instance hydrated with the result,
+         * or just the current instance if there was no result.
          */
         public function find_one($id=null) {
             if(!is_null($id)) {
@@ -165,7 +149,8 @@
         
         /**
          * Did we load any rows from the last query?
-         * Since all objects
+         * This is because we no longer return false from find_one();
+         * the object is always representative of a potential database row.
          */
         public function loaded() {
             return !$this->_is_new;
@@ -263,7 +248,7 @@
          * Factory method used to acquire instances of the given class.
          * The class name should be supplied as a string, and the class
          * should already have been loaded by PHP (or a suitable autoloader
-         * should exist).  Basically a wrapper for new Class() to facilitate
+         * should exist).  Basically a wrapper for the new operator to facilitate
          * chaining.
          */
         public static function factory($class_name) {
