@@ -94,17 +94,17 @@ Properties on model objects represent columns from the database table.  You can 
     echo $user->id;
     // prints the id assigned to the newly inserted row
 
-To operate on rows already in the database table the `find_one` and `find_many` methods from [Idiorm](http://github.com/j4mie/idiorm/) are available, but slightly enhanced.  Instead of returning an instance of the ORM class `find_one` loads data from the database into the current instance.  As in Idiorm, it can accept a primary key ID as its argument.  For example, 
+To operate on rows already in the database table the `find_one` and `find_many` methods from [Idiorm](http://github.com/j4mie/idiorm/) are available, but slightly enhanced.  Instead of returning an instance of the ORM class `find_one` loads data from the database into the current instance of your model.  As in Idiorm, it can accept a primary key ID as its argument.  For example, to load the user with id `$id`: 
 
     $user = new User;
     $user->find_one($id);
 
-Since Paris uses nearly the same [fluent interface](http://en.wikipedia.org/wiki/Fluent_interface) as Idiorm, it relies on a lot of chaining.  For this reason, a convenience *factory method* called `factory` on the base `Model` class is provided.  It takes a single argument: the name of the model class you wish to use, and immediately returns it for the purpose of chaining.
+As an aside, since Paris uses nearly the same [fluent interface](http://en.wikipedia.org/wiki/Fluent_interface) as Idiorm, it relies on a lot of chaining.  For this reason, a convenience *factory method* called `factory` on the base `Model` class is provided.  It takes a single argument: the name of the model class you wish to use, and immediately returns a new empty instance of this model to facilitate chaining.
 
     $user = Model::factory('User')->find_one($id);
     // equivalent to the previous example.
 
-Since this `$user` object represents a row in the database, when it is modified and saved, it performs an update on the database instead of inserting a new row.
+Since the `$user` object now represents an existing row in the database, when it is modified and saved, it performs an *update* on the database instead of inserting a new row.
 
     $user->name = "Fred";
     $user->email = "fred@example.com";
@@ -112,6 +112,10 @@ Since this `$user` object represents a row in the database, when it is modified 
     $user->save();
     echo $user->id;
     // should still be the same as $id.
+
+To delete the user, the `delete` method can be applied to `$user`.  This takes effect immediately and does not require a subsequent call to `save`.
+
+    $user->delete();
 
 #### Querying ####
 
@@ -124,7 +128,7 @@ For example:
         ->where_gte('age', 20)
         ->find_many();
 
-This creates an array of `User` objects that can be manipulated, or an empty row if no records were found.  To find and immediately instantiate a `User` from one row only, use query methods and then `find_one` without an argument:
+This sets `$users` to an array of `User` objects that can be manipulated, or an empty array if no records were found.  To find and immediately instantiate a `User` from one row only, use query methods and then `find_one` without an argument:
 
     $user = Model::factory('User')->where('email', 'fred@example.com')->find_one();
 
@@ -338,15 +342,14 @@ Here is an example utilizing a filter method with an argument.
 
 These examples may seem simple (`has_role('admin')` could just as easily be achieved using `where('role', 'admin')`), but remember that filters can contain arbitrarily complex code - adding `raw_where` clauses or even complete `raw_query` calls to perform joins, etc. Filters provide a powerful mechanism to hide complexity in your model's query API.
 
-### Getting data from objects, updating and inserting data ###
+### Examples: Getting, updating and inserting data ###
 
-The model instances returned by your queries behave exactly as if they were instances of Idiorm's raw `ORM` class.
+The model instances returned by your queries behave similarly to instances of Idiorm's raw `ORM` class.  To distinguish whether data was successfully loaded into your model instance with `find_one`. always use the `loaded` method.
 
-You can access data:
+Accessing data:
 
     $user = Model::factory('User')->find_one($id);
-    if ($user->loaded())
-        echo $user->name;
+    echo $user->loaded() ? $user->name : 'User not found';
 
 Update data and save the instance:
 
@@ -365,8 +368,7 @@ Of course, because these objects are instances of your base model classes, you c
     }
 
     $user = Model::factory('User')->find_one($id);
-    if ($user->loaded())
-        echo $user->full_name();
+    echo $user->loaded() ? $user->full_name() : 'User not found';
 
 To delete the database row associated with an instance of your model, call its `delete` method:
 
