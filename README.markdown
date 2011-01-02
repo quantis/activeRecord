@@ -343,6 +343,34 @@ Here is an example utilizing a filter method with an argument.
 
 These examples may seem simple (`has_role('admin')` could just as easily be achieved using `where('role', 'admin')`), but remember that filters can contain arbitrarily complex code - adding `raw_where` clauses or even complete `raw_query` calls to perform joins, etc. Filters provide a powerful mechanism to hide complexity in your model's query API.
 
+### Transactions ###
+
+Dakota provides three shortcuts for initiating, committing and rolling back transactions as public static methods on the Model class.  Your database must support transactions: e.g., if you are using MySQL, your tables must be using the InnoDB and not the MyISAM engine.
+
+Transactions are started with `Model::start_transaction` like this:
+
+    Model::start_transaction();
+    $user = Model::factory('User')->find_one($user_id);
+    $user->balance -= $price;
+    $user->save();
+
+At this point changes have not actually been saved to the database, since the transaction is still open.  The reason this sort of update is best encapsulated in a transaction is that other processes that attempt to simultaneously update the `user` table will not interfere with this balance calculation.  For example, a simultaneous credit operation that updates this user's balance between the queries normally executed by `find_one` and `save` would have been silently overwritten unless a transaction was in progress, as it is here.
+
+At any point a transaction can be canceled with `Model::rollback`, and the database will be left in the state it was before the transaction began.
+
+    if ($user->balance < 0) {
+      echo "Sorry, you have insufficient funds.";
+      Model::rollback();
+      return;
+    }
+
+When the changes contained in the transaction are ready to be applied, use `Model::commit`.
+
+    Model::commit();
+    echo "Your new balance is: {$user->balance}";
+
+Transactions are not necessary for everyday use of Dakota.  If a transaction has not been started with `Model::start_transaction`, every `save` and `delete` call is implicitly committed to the database immediately following the query's execution.  For more information, see [PDO's documentation on transactions](http://www.php.net/manual/en/pdo.transactions.php).
+
 ### Examples: Getting, updating and inserting data ###
 
 The model instances returned by your queries behave similarly to instances of Idiorm's raw `ORM` class.  To distinguish whether data was successfully loaded into your model instance with `find_one`. always use the `loaded` method.
@@ -409,7 +437,7 @@ It's generally considered a good idea to centralise your data validation in a si
 
 Despite this, Dakota doesn't provide any built-in support for validation. This is because validation is potentially quite complex, and often very application-specific. Dakota is deliberately quite ignorant about your actual data - it simply executes queries, and gives you the responsibility of making sure the data inside your models is valid and correct. Adding a full validation framework to Dakota would probably require more code than Dakota itself!
 
-However, there are several simple ways that you could add validation to your models without any help from Dakota. You could override the `save()` method, check the data is valid, and return `false` on failure, or call `parent::save()` on success. You could create your own subclass of the `Model` base class and add your own generic validation methods. Or you could write your own external validation framework which you pass model instances to for checking. Choose whichever approach is most suitable for your own requirements.
+However, there are several simple ways that you could add validation to your models without any help from Dakota. You could override the `save()` method, check the data is valid, and return `false` on failure, or return `parent::save()` on success. You could create your own subclass of the `Model` base class and add your own generic validation methods. Or you could write your own external validation framework which you pass model instances to for checking. Choose whichever approach is most suitable for your own requirements.
 
 ### Configuration ###
 
