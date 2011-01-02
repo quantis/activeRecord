@@ -1,9 +1,10 @@
-Paris
-=====
+Dakota
+======
 
 A lightweight Active Record implementation for PHP5.
 
 Built on top of [Idiorm](http://github.com/j4mie/idiorm/).
+Forked from [Paris](http://github.com/j4mie/paris/).
 
 Tested on PHP 5.2.0+ - may work on earlier versions with PDO and the correct database drivers.
 
@@ -23,17 +24,17 @@ Features
 Philosophy
 ----------
 
-Paris is built with the same *less is more* philosophy as [Idiorm](http://github.com/j4mie/idiorm/).
+Dakota is built with the same *less is more* philosophy as [Idiorm](http://github.com/j4mie/idiorm/).
 
 Let's See Some Code
 -------------------
 
 ### Setup ###
 
-Paris requires [Idiorm](http://github.com/j4mie/idiorm/). Install Idiorm and Paris somewhere in your project directory, and `require` both.
+Dakota requires [Idiorm](http://github.com/j4mie/idiorm/). Install Idiorm and Dakota somewhere in your project directory, and `require` both.
 
     require_once 'your/path/to/idiorm.php';
-    require_once 'your/path/to/paris.php';
+    require_once 'your/path/to/dakota.php';
 
 Then, you need to tell Idiorm how to connect to your database. **For full details of how to do this, see [Idiorm's documentation](http://github.com/j4mie/idiorm/).**
 
@@ -54,13 +55,13 @@ You should create a model class for each entity in your application. For example
     class User extends Model {
     }
 
-Paris takes care of creating instances of your model classes, and populating them with *data* from the database. You can then add *behaviour* to this class in the form of public methods which implement your application logic. This combination of data and behaviour is the essence of the [Active Record pattern](http://martinfowler.com/eaaCatalog/activeRecord.html).
+Dakota takes care of creating instances of your model classes, and populating them with *data* from the database. You can then add *behaviour* to this class in the form of public methods which implement your application logic. This combination of data and behaviour is the essence of the [Active Record pattern](http://martinfowler.com/eaaCatalog/activeRecord.html).
 
 ### Database Tables ###
 
 Your `User` class should have a corresponding `user` table in your database to store its data.
 
-By default, Paris assumes your class names are in *CapWords* style, and your table names are in *lowercase_with_underscores* style. It will convert between the two automatically. For example, if your class is called `CarTyre`, Paris will look for a table named `car_tyre`.
+By default, Dakota assumes your class names are in *CapWords* style, and your table names are in *lowercase_with_underscores* style. It will convert between the two automatically. For example, if your class is called `CarTyre`, Dakota will look for a table named `car_tyre`.
 
 To override this default behaviour, add a **public static** property to your class called `$_table`:
 
@@ -70,15 +71,15 @@ To override this default behaviour, add a **public static** property to your cla
 
 ### ID Column ###
 
-Paris requires that your database tables have a unique primary key column. By default, Paris will use a column called `id`. To override this default behaviour, add a **public static** property to your class called `$_id_column`:
+Dakota requires that your database tables have a unique primary key column. By default, Dakota will use a column called `id`. To override this default behaviour, add a **public static** property to your class called `$_id_column`:
 
     class User extends Model {
         public static $_id_column = 'my_id_column';
     }
 
-**Note** - Paris has its *own* default ID column name mechanism, and does not respect column names specified in Idiorm's configuration.
+**Note** - Dakota has its *own* default ID column name mechanism, and does not respect column names specified in Idiorm's configuration.
 
-### Paris' Active Record pattern ###
+### Dakota's Active Record pattern ###
 
 Each instance of your class represents a row in the database table.  For example, to create an object representing a new row in the `user` table,
 
@@ -99,7 +100,7 @@ To operate on rows already in the database table the `find_one` and `find_many` 
     $user = new User;
     $user->find_one($id);
 
-As an aside, since Paris uses nearly the same [fluent interface](http://en.wikipedia.org/wiki/Fluent_interface) as Idiorm, it relies on a lot of chaining.  For this reason, a convenience *factory method* called `factory` on the base `Model` class is provided.  It takes a single argument: the name of the model class you wish to use, and immediately returns a new empty instance of this model to facilitate chaining.
+As an aside, since Dakota uses nearly the same [fluent interface](http://en.wikipedia.org/wiki/Fluent_interface) as Idiorm, it relies on a lot of chaining.  For this reason, a convenience *factory method* called `factory` on the base `Model` class is provided.  It takes a single argument: the name of the model class you wish to use, and immediately returns a new empty instance of this model to facilitate chaining.
 
     $user = Model::factory('User')->find_one($id);
     // equivalent to the previous example.
@@ -119,7 +120,7 @@ To delete the user, the `delete` method can be applied to `$user`.  This takes e
 
 #### Querying ####
 
-Querying allows you to select particular rows from your database to populate instances of your model class.  Query methods operate on instances of your class, chain as in [Idiorm](http://github.com/j4mie/idiorm/), and then execute when a call to `find_one` or `find_many` is performed.  Paris gives you full access to Idiorm's fluent query API.  **See [Idiorm's documentation](http://github.com/j4mie/idiorm/) for details of this API.**
+Querying allows you to select particular rows from your database to populate instances of your model class.  Query methods operate on instances of your class, chain as in [Idiorm](http://github.com/j4mie/idiorm/), and then execute when a call to `find_one` or `find_many` is performed.  Dakota gives you full access to Idiorm's fluent query API.  **See [Idiorm's documentation](http://github.com/j4mie/idiorm/) for details of this API.**
 
 For example:
 
@@ -143,13 +144,13 @@ You may also want to retrieve a count of the number of rows returned by your que
 
 This returns an integer and leaves the model instance unaffected.
 
-We should summarize differences between using Idiorm and using Paris for querying:
+We should summarize differences between using Idiorm and using Dakota for querying:
 
-1. You do not need to call the `for_table` method to specify the database table to use. Paris will supply this automatically based on the class name (or the `$_table` static property, if present).
+1. You do not need to call the `for_table` method to specify the database table to use. Dakota will supply this automatically based on the class name (or the `$_table` static property, if present).
 
 2. The `find_one` and `find_many` methods will return instances of *your model subclass*, instead of the base `ORM` class. Like Idiorm, `find_one` will return a single instance if a row matches, while `find_many` will return an array of instances, which may be empty if no rows matched.
 
-3. Unlike Idiorm, `find_one` does not return false if no rows matched, it returns an unloaded instance of the model.  You should always use the `loaded` method to check if a row was loaded.  This is because Paris model instances represent potentially new rows until an existing row is loaded into them via the `find_one` or `find_many` methods.  As an example:
+3. Unlike Idiorm, `find_one` does not return false if no rows matched, it returns an unloaded instance of the model.  You should always use the `loaded` method to check if a row was loaded.  This is because Dakota model instances represent potentially new rows until an existing row is loaded into them via the `find_one` or `find_many` methods.  As an example:
 
         $user = Model::factory('User')->where('name', 'Fred')->find_one();
         if (!$user->loaded()) {
@@ -166,13 +167,13 @@ We should summarize differences between using Idiorm and using Paris for queryin
 
 ### Associations ###
 
-Paris provides a simple API for one-to-one, one-to-many and many-to-many relationships (associations) between models. It takes a different approach to many other ORMs, which use associative arrays to add configuration metadata about relationships to model classes. These arrays can often be deeply nested and complex, and are therefore quite error-prone.
+Dakota provides a simple API for one-to-one, one-to-many and many-to-many relationships (associations) between models. It takes a different approach to many other ORMs, which use associative arrays to add configuration metadata about relationships to model classes. These arrays can often be deeply nested and complex, and are therefore quite error-prone.
 
-Instead, Paris treats the act of querying across a relationship as a *behaviour*, and supplies a family of helper methods to help generate such queries. These helper methods should be called from within *methods* on your model classes which are named to describe the relationship. These methods return ORM instances (rather than actual Model instances) and so, if necessary, the relationship query can be modified and added to before it is run.
+Instead, Dakota treats the act of querying across a relationship as a *behaviour*, and supplies a family of helper methods to help generate such queries. These helper methods should be called from within *methods* on your model classes which are named to describe the relationship. These methods return ORM instances (rather than actual Model instances) and so, if necessary, the relationship query can be modified and added to before it is run.
 
 #### Summary ####
 
-The following list summarises the associations provided by Paris, and explains which helper method supports each type of association:
+The following list summarises the associations provided by Dakota, and explains which helper method supports each type of association:
 
 ##### One-to-one #####
 
@@ -190,7 +191,7 @@ Below, each association helper method is discussed in detail.
 
 #### Has-one ####
 
-One-to-one relationships are implemented using the `has_one` method. For example, say we have a `User` model. Each user has a single `Profile`, and so the `user` table should be associated with the `profile` table. To be able to find the profile for a particular user, we should add a method called `profile` to the `User` class (note that the method name here is arbitrary, but should describe the relationship). This method calls the protected `has_one` method provided by Paris, passing in the class name of the related object. The `profile` method should return an ORM instance ready for (optional) further filtering.
+One-to-one relationships are implemented using the `has_one` method. For example, say we have a `User` model. Each user has a single `Profile`, and so the `user` table should be associated with the `profile` table. To be able to find the profile for a particular user, we should add a method called `profile` to the `User` class (note that the method name here is arbitrary, but should describe the relationship). This method calls the protected `has_one` method provided by Dakota, passing in the class name of the related object. The `profile` method should return an ORM instance ready for (optional) further filtering.
 
     class Profile extends Model {
     }
@@ -209,11 +210,11 @@ The API for this method works as follows:
     // Find the profile associated with the user
     $profile = $user->profile()->find_one();
 
-By default, Paris assumes that the foreign key column on the related table has the same name as the current (base) table, with `_id` appended. In the example above, Paris will look for a foreign key column called `user_id` on the table used by the `Profile` class. To override this behaviour, add a second argument to your `has_one` call, passing the name of the column to use.
+By default, Dakota assumes that the foreign key column on the related table has the same name as the current (base) table, with `_id` appended. In the example above, Dakota will look for a foreign key column called `user_id` on the table used by the `Profile` class. To override this behaviour, add a second argument to your `has_one` call, passing the name of the column to use.
 
 #### Has many ####
 
-One-to-many relationships are implemented using the `has_many` method. For example, say we have a `User` model. Each user has several `Post` objects. The `user` table should be associated with the `post` table. To be able to find the posts for a particular user, we should add a method called `posts` to the `User` class (note that the method name here is arbitrary, but should describe the relationship). This method calls the protected `has_many` method provided by Paris, passing in the class name of the related objects. **Pass the model class name literally, not a pluralised version**. The `posts` method should return an ORM instance ready for (optional) further filtering.
+One-to-many relationships are implemented using the `has_many` method. For example, say we have a `User` model. Each user has several `Post` objects. The `user` table should be associated with the `post` table. To be able to find the posts for a particular user, we should add a method called `posts` to the `User` class (note that the method name here is arbitrary, but should describe the relationship). This method calls the protected `has_many` method provided by Dakota, passing in the class name of the related objects. **Pass the model class name literally, not a pluralised version**. The `posts` method should return an ORM instance ready for (optional) further filtering.
 
     class Post extends Model {
     }
@@ -232,7 +233,7 @@ The API for this method works as follows:
     // Find the posts associated with the user
     $posts = $user->posts()->find_many();
 
-By default, Paris assumes that the foreign key column on the related table has the same name as the current (base) table, with `_id` appended. In the example above, Paris will look for a foreign key column called `user_id` on the table used by the `Post` class. To override this behaviour, add a second argument to your `has_many` call, passing the name of the column to use.
+By default, Dakota assumes that the foreign key column on the related table has the same name as the current (base) table, with `_id` appended. In the example above, Dakota will look for a foreign key column called `user_id` on the table used by the `Post` class. To override this behaviour, add a second argument to your `has_many` call, passing the name of the column to use.
 
 #### Belongs to ####
 
@@ -255,7 +256,7 @@ The API for this method works as follows:
     // Find the user associated with the profile
     $user = $profile->user()->find_one();
 
-Again, Paris makes an assumption that the foreign key on the current (base) table has the same name as the related table with `_id` appended. In the example above, Paris will look for a column named `user_id`. To override this behaviour, pass a second argument to the `belongs_to` method, specifying the name of the column on the current (base) table to use.
+Again, Dakota makes an assumption that the foreign key on the current (base) table has the same name as the related table with `_id` appended. In the example above, Dakota will look for a column named `user_id`. To override this behaviour, pass a second argument to the `belongs_to` method, specifying the name of the column on the current (base) table to use.
 
 #### Has many through ####
 
@@ -263,7 +264,7 @@ Many-to-many relationships are implemented using the `has_many_through` method. 
 
 For example, say we have a `Book` model. Each `Book` may have several `Author` objects, and each `Author` may have written several `Books`. To be able to find the authors for a particular book, we should first create an intermediary model. The name for this model should be constructed by concatenating the names of the two related classes, in alphabetical order. In this case, our classes are called `Author` and `Book`, so the intermediate model should be called `AuthorBook`.
 
-We should then add a method called `authors` to the `Book` class (note that the method name here is arbitrary, but should describe the relationship). This method calls the protected `has_many_through` method provided by Paris, passing in the class name of the related objects. **Pass the model class name literally, not a pluralised version**. The `authors` method should return an ORM instance ready for (optional) further filtering.
+We should then add a method called `authors` to the `Book` class (note that the method name here is arbitrary, but should describe the relationship). This method calls the protected `has_many_through` method provided by Dakota, passing in the class name of the related objects. **Pass the model class name literally, not a pluralised version**. The `authors` method should return an ORM instance ready for (optional) further filtering.
 
     class Author extends Model {
         public function books() {
@@ -308,7 +309,7 @@ The `has_many_through` method takes up to four arguments, which allow us to prog
 
 ### Filters ###
 
-It is often desirable to create reusable queries that can be used to extract particular subsets of data without repeating large sections of code.  Paris allows you to do this by writing functions that extend your model class, within which you run Idiorm query builder methods on the `$this` object.  By returning `$this` from your function, you will allow your method to be chainable.
+It is often desirable to create reusable queries that can be used to extract particular subsets of data without repeating large sections of code.  Dakota allows you to do this by writing functions that extend your model class, within which you run Idiorm query builder methods on the `$this` object.  By returning `$this` from your function, you will allow your method to be chainable.
 
 It is easiest to illustrate this with an example. Imagine an application in which users can be assigned a role, which controls their access to certain pieces of functionality. In this situation, you may often wish to retrieve a list of users with the role 'admin'. To do this, add a method called (for example) `admins` to your Model class:
 
@@ -355,7 +356,7 @@ Update data and save the instance:
 
     $user = Model::factory('User')->find_one($id);
     if ($user->loaded()) {
-        $user->name = 'Paris';
+        $user->name = 'Dakota';
         $user->save();
     }
 
@@ -406,13 +407,13 @@ The `as_array` method takes column names as optional arguments. If one or more o
 
 It's generally considered a good idea to centralise your data validation in a single place, and a good place to do this is inside your model classes. This is preferable to handling validation alongside form handling code, for example. Placing validation code inside models means that if you extend your application in the future to update your model via an alternative route (say a REST API rather than a form) you can re-use the same validation code.
 
-Despite this, Paris doesn't provide any built-in support for validation. This is because validation is potentially quite complex, and often very application-specific. Paris is deliberately quite ignorant about your actual data - it simply executes queries, and gives you the responsibility of making sure the data inside your models is valid and correct. Adding a full validation framework to Paris would probably require more code than Paris itself!
+Despite this, Dakota doesn't provide any built-in support for validation. This is because validation is potentially quite complex, and often very application-specific. Dakota is deliberately quite ignorant about your actual data - it simply executes queries, and gives you the responsibility of making sure the data inside your models is valid and correct. Adding a full validation framework to Dakota would probably require more code than Dakota itself!
 
-However, there are several simple ways that you could add validation to your models without any help from Paris. You could override the `save()` method, check the data is valid, and return `false` on failure, or call `parent::save()` on success. You could create your own subclass of the `Model` base class and add your own generic validation methods. Or you could write your own external validation framework which you pass model instances to for checking. Choose whichever approach is most suitable for your own requirements.
+However, there are several simple ways that you could add validation to your models without any help from Dakota. You could override the `save()` method, check the data is valid, and return `false` on failure, or call `parent::save()` on success. You could create your own subclass of the `Model` base class and add your own generic validation methods. Or you could write your own external validation framework which you pass model instances to for checking. Choose whichever approach is most suitable for your own requirements.
 
 ### Configuration ###
 
-The only configuration options provided by Paris itself are the `$_table` and `$_id_column` static properties on model classes. To configure the database connection, you should use Idiorm's configuration system via the `ORM::configure` method. **See [Idiorm's documentation](http://github.com/j4mie/idiorm/) for full details.**
+The only configuration options provided by Dakota itself are the `$_table` and `$_id_column` static properties on model classes. To configure the database connection, you should use Idiorm's configuration system via the `ORM::configure` method. **See [Idiorm's documentation](http://github.com/j4mie/idiorm/) for full details.**
 
 ### Query logging ###
 
