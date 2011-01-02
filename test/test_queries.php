@@ -10,7 +10,7 @@
      */
 
     require_once dirname(__FILE__) . "/idiorm.php";
-    require_once dirname(__FILE__) . "/../paris.php";
+    require_once dirname(__FILE__) . "/../dakota.php";
     require_once dirname(__FILE__) . "/test_classes.php";
 
     // Enable logging
@@ -54,32 +54,39 @@
 
     class ModelWithFilters extends Model {
 
-        public static function name_is_fred($orm) {
-            return $orm->where('name', 'Fred');
+        public function name_is_fred() {
+            return $this->where('name', 'Fred');
         }
 
-        public static function name_is($orm, $name) {
-            return $orm->where('name', $name);
+        public function name_is($name) {
+            return $this->where('name', $name);
         }
     }
 
-    Model::factory('ModelWithFilters')->filter('name_is_fred')->find_many();
+    Model::factory('ModelWithFilters')->name_is_fred()->find_many();
     $expected = "SELECT * FROM `model_with_filters` WHERE `name` = 'Fred'";
     Tester::check_equal("Filter with no arguments", $expected);
 
-    Model::factory('ModelWithFilters')->filter('name_is', 'Bob')->find_many();
+    Model::factory('ModelWithFilters')->name_is('Bob')->find_many();
     $expected = "SELECT * FROM `model_with_filters` WHERE `name` = 'Bob'";
     Tester::check_equal("Filter with arguments", $expected);
 
     class Widget extends Model {
     }
 
-    $widget = Model::factory('Widget')->create();
+    $widget = Model::factory('Widget');
     $widget->name = "Fred";
     $widget->age = 10;
     $widget->save();
     $expected = "INSERT INTO `widget` (`name`, `age`) VALUES ('Fred', '10')";
     Tester::check_equal("Insert data", $expected);
+    
+    $widget = new Widget;
+    $widget->name = "Bob";
+    $widget->age = 15;
+    $widget->save();
+    $expected = "INSERT INTO `widget` (`name`, `age`) VALUES ('Bob', '15')";
+    Tester::check_equal("Insert data (alt)", $expected);
 
     $widget = Model::factory('Widget')->find_one(1);
     $widget->name = "Fred";
