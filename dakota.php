@@ -125,7 +125,8 @@
                 $this->where_id_is($id);
             }
             $this->limit(1);
-            return $result ? $this->hydrate($this->_run())->not_new() : $this;
+            $rows = $this->_run();
+            return $rows ? $this->hydrate($rows[0])->not_new() : $this;
         }
 
         /**
