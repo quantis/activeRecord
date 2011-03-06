@@ -31,7 +31,7 @@ Let's See Some Code
 
 ### Setup ###
 
-Dakota requires [Idiorm](http://github.com/j4mie/idiorm/). Install Idiorm and Dakota somewhere in your project directory, and `require` both.
+Dakota requires Idiorm. Install Dakota with Idiorm somewhere in your project directory, and `require` both. The latest version of Idiorm that Dakota is known to work with is included in the `test` directory of this repository, but it's possible that the bleeding edge version at [j4mie's repository](http://github.com/j4mie/idiorm/) will still work.
 
     require_once 'your/path/to/idiorm.php';
     require_once 'your/path/to/dakota.php';
