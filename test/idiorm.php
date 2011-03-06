@@ -61,7 +61,9 @@
             'username' => null,
             'password' => null,
             'driver_options' => null,
+            'identifier_quote_character' => null, // if this is null, will be autodetected
             'logging' => false,
+            'caching' => false,
         );
 
         // Database connection, instance of the PDO class
@@ -72,6 +74,9 @@
 
         // Log of all queries run, only populated if logging is enabled
         protected static $_query_log = array();
+
+        // Query cache, only used if query caching is enabled
+        protected static $_query_cache = array();
 
         // --------------------------- //
         // --- INSTANCE PROPERTIES --- //
@@ -95,6 +100,9 @@
         // Join sources
         protected $_join_sources = array();
 
+        // Should the query include a DISTINCT keyword?
+        protected $_distinct = false;
+
         // Is this a raw query?
         protected $_is_raw_query = false;
 
@@ -115,6 +123,9 @@
 
         // ORDER BY
         protected $_order_by = array();
+
+        // GROUP BY
+        protected $_group_by = array();
 
         // The data for a hydrated instance of the class
         protected $_data = array();
@@ -159,6 +170,7 @@
          * this will normally be the first method called in a chain.
          */
         public static function for_table($table_name) {
+            self::_setup_db();
             return new self($table_name);
         }
 
@@ -171,18 +183,52 @@
                 $username = self::$_config['username'];
                 $password = self::$_config['password'];
                 $driver_options = self::$_config['driver_options'];
-                self::$_db = new PDO($connection_string, $username, $password, $driver_options);
-                self::$_db->setAttribute(PDO::ATTR_ERRMODE, self::$_config['error_mode']);
+                $db = new PDO($connection_string, $username, $password, $driver_options);
+                $db->setAttribute(PDO::ATTR_ERRMODE, self::$_config['error_mode']);
+                self::set_db($db);
             }
         }
 
         /**
-         * This can be called if the ORM should use a ready-instantiated
-         * PDO object as its database connection. Won't be used in normal
-         * operation, but it's here in case it's needed.
+         * Set the PDO object used by Idiorm to communicate with the database.
+         * This is public in case the ORM should use a ready-instantiated
+         * PDO object as its database connection.
          */
         public static function set_db($db) {
             self::$_db = $db;
+            self::_setup_identifier_quote_character();
+        }
+
+        /**
+         * Detect and initialise the character used to quote identifiers
+         * (table names, column names etc). If this has been specified
+         * manually using ORM::configure('identifier_quote_character', 'some-char'),
+         * this will do nothing.
+         */
+        public static function _setup_identifier_quote_character() {
+            if (is_null(self::$_config['identifier_quote_character'])) {
+                self::$_config['identifier_quote_character'] = self::_detect_identifier_quote_character();
+            }
+        }
+
+        /**
+         * Return the correct character used to quote identifiers (table
+         * names, column names etc) by looking at the driver being used by PDO.
+         */
+        protected static function _detect_identifier_quote_character() {
+            switch(self::$_db->getAttribute(PDO::ATTR_DRIVER_NAME)) {
+                case 'pgsql':
+                case 'sqlsrv':
+                case 'dblib':
+                case 'mssql':
+                case 'sybase':
+                    return '"';
+                case 'mysql':
+                case 'sqlite':
+                case 'sqlite2':
+                default:
+                    return '`';
+            }
         }
 
         /**
@@ -191,7 +237,7 @@
          * required outside the class.
          */
         public static function get_db() {
-            self::_setup_db();
+            self::_setup_db(); // required in case this is called before Idiorm is instantiated
             return self::$_db;
         }
 
@@ -289,6 +335,17 @@
         }
 
         /**
+         * Create an ORM instance from the given row (an associative
+         * array of data fetched from the database)
+         */
+        protected function _create_instance_from_row($row) {
+            $instance = self::for_table($this->_table_name);
+            $instance->use_id_column($this->_instance_id_column);
+            $instance->hydrate($row);
+            return $instance;
+        }
+
+        /**
          * Tell the ORM that you are expecting a single result
          * back from your query, and execute it. Will return
          * a single instance of the ORM class, or false if no
@@ -298,13 +355,17 @@
          * lookup on the table.
          */
         public function find_one($id=null) {
-            if(!is_null($id)) {
+            if (!is_null($id)) {
                 $this->where_id_is($id);
             }
             $this->limit(1);
-            $statement = $this->_run();
-            $result = $statement->fetch(PDO::FETCH_ASSOC);
-            return $result ? self::for_table($this->_table_name)->use_id_column($this->_instance_id_column)->hydrate($result) : $result;
+            $rows = $this->_run();
+
+            if (empty($rows)) {
+                return false;
+            }
+
+            return $this->_create_instance_from_row($rows[0]);
         }
 
         /**
@@ -314,12 +375,8 @@
          * no rows were returned.
          */
         public function find_many() {
-            $statement = $this->_run();
-            $instances = array();
-            while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
-                $instances[] = self::for_table($this->_table_name)->use_id_column($this->_instance_id_column)->hydrate($row);
-            }
-            return $instances;
+            $rows = $this->_run();
+            return array_map(array($this, '_create_instance_from_row'), $rows);
         }
 
         /**
@@ -329,9 +386,8 @@
          */
         public function count() {
             $this->select_expr('COUNT(*)', 'count');
-            $statement = $this->_run();
-            $result = $statement->fetch(PDO::FETCH_ASSOC);
-            return isset($result['count']) ? (int) $result['count'] : 0;
+            $result = $this->find_one();
+            return ($result !== false && isset($result->count)) ? (int) $result->count : 0;
         }
 
          /**
@@ -412,6 +468,14 @@
          */
         public function select_expr($expr, $alias=null) {
             return $this->_add_result_column($expr, $alias);
+        }
+
+        /**
+         * Add a DISTINCT keyword before the list of columns in the SELECT query
+         */
+        public function distinct() {
+            $this->_distinct = true;
+            return $this;
         }
 
         /**
@@ -498,7 +562,7 @@
         /**
          * Internal method to add a WHERE condition to the query
          */
-        protected function _add_where($fragment, $values) {
+        protected function _add_where($fragment, $values=array()) {
             if (!is_array($values)) {
                 $values = array($values);
             }
@@ -544,6 +608,13 @@
          */
         public function where_equal($column_name, $value) {
             return $this->_add_simple_where($column_name, '=', $value);
+        }
+
+        /**
+         * Add a WHERE column != value clause to your query.
+         */
+        public function where_not_equal($column_name, $value) {
+            return $this->_add_simple_where($column_name, '!=', $value);
         }
 
         /**
@@ -614,11 +685,27 @@
         }
 
         /**
+         * Add a WHERE column IS NULL clause to your query
+         */
+        public function where_null($column_name) {
+            $column_name = $this->_quote_identifier($column_name);
+            return $this->_add_where("{$column_name} IS NULL");
+        }
+
+        /**
+         * Add a WHERE column IS NOT NULL clause to your query
+         */
+        public function where_not_null($column_name) {
+            $column_name = $this->_quote_identifier($column_name);
+            return $this->_add_where("{$column_name} IS NOT NULL");
+        }
+
+        /**
          * Add a raw WHERE clause to the query. The clause should
          * contain question mark placeholders, which will be bound
          * to the parameters supplied in the second argument.
          */
-        public function where_raw($clause, $parameters) {
+        public function where_raw($clause, $parameters=array()) {
             return $this->_add_where($clause, $parameters);
         }
 
@@ -662,6 +749,15 @@
         }
 
         /**
+         * Add a column to the list of columns to GROUP BY
+         */
+        public function group_by($column_name) {
+            $column_name = $this->_quote_identifier($column_name);
+            $this->_group_by[] = $column_name;
+            return $this;
+        }
+
+        /**
          * Build a SELECT statement based on the clauses that have
          * been passed to this instance by chaining method calls.
          */
@@ -679,6 +775,7 @@
                 $this->_build_select_start(),
                 $this->_build_join(),
                 $this->_build_where(),
+                $this->_build_group_by(),
                 $this->_build_order_by(),
                 $this->_build_limit(),
                 $this->_build_offset(),
@@ -690,7 +787,13 @@
          */
         protected function _build_select_start() {
             $result_columns = join(', ', $this->_result_columns);
+
+            if ($this->_distinct) {
+                $result_columns = 'DISTINCT ' . $result_columns;
+            }
+
             $fragment = "SELECT {$result_columns} FROM " . $this->_quote_identifier($this->_table_name);
+
             if (!is_null($this->_table_alias)) {
                 $fragment .= " " . $this->_quote_identifier($this->_table_alias);
             }
@@ -724,6 +827,16 @@
             }
 
             return "WHERE " . join(" AND ", $where_conditions);
+        }
+
+        /**
+         * Build GROUP BY
+         */
+        protected function _build_group_by() {
+            if (count($this->_group_by) === 0) {
+                return '';
+            }
+            return "GROUP BY " . join(", ", $this->_group_by);
         }
 
         /**
@@ -786,24 +899,82 @@
 
         /**
          * This method performs the actual quoting of a single
-         * part of an identifier. Currently uses backticks, which
-         * are compatible with (at least) MySQL and SQLite.
+         * part of an identifier, using the identifier quote
+         * character specified in the config (or autodetected).
          */
         protected function _quote_identifier_part($part) {
-            return "`$part`";
+            if ($part === '*') {
+                return $part;
+            }
+            $quote_character = self::$_config['identifier_quote_character'];
+            return $quote_character . $part . $quote_character;
+        }
+
+        /**
+         * Create a cache key for the given query and parameters.
+         */
+        protected static function _create_cache_key($query, $parameters) {
+            $parameter_string = join(',', $parameters);
+            $key = $query . ':' . $parameter_string;
+            return sha1($key);
+        }
+
+        /**
+         * Check the query cache for the given cache key. If a value
+         * is cached for the key, return the value. Otherwise, return false.
+         */
+        protected static function _check_query_cache($cache_key) {
+            if (isset(self::$_query_cache[$cache_key])) {
+                return self::$_query_cache[$cache_key];
+            }
+            return false;
+        }
+
+        /**
+         * Clear the query cache
+         */
+        public static function clear_cache() {
+            self::$_query_cache = array();
+        }
+
+        /**
+         * Add the given value to the query cache.
+         */
+        protected static function _cache_query_result($cache_key, $value) {
+            self::$_query_cache[$cache_key] = $value;
         }
 
         /**
          * Execute the SELECT query that has been built up by chaining methods
-         * on this class. Return the executed PDOStatement object.
+         * on this class. Return an array of rows as associative arrays.
          */
         protected function _run() {
             $query = $this->_build_select();
-            self::_setup_db();
+            $caching_enabled = self::$_config['caching'];
+
+            if ($caching_enabled) {
+                $cache_key = self::_create_cache_key($query, $this->_values);
+                $cached_result = self::_check_query_cache($cache_key);
+
+                if ($cached_result !== false) {
+                    return $cached_result;
+                }
+            }
+
             self::_log_query($query, $this->_values);
             $statement = self::$_db->prepare($query);
             $statement->execute($this->_values);
-            return $statement;
+
+            $rows = array();
+            while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
+                $rows[] = $row;
+            }
+
+            if ($caching_enabled) {
+                self::_cache_query_result($cache_key, $rows);
+            }
+
+            return $rows;
         }
 
         /**
@@ -861,6 +1032,14 @@
         }
 
         /**
+         * Check whether the given field has been changed since this
+         * object was saved.
+         */
+        public function is_dirty($key) {
+            return isset($this->_dirty_fields[$key]);
+        }
+
+        /**
          * Save any fields which have been modified on this object
          * to the database.
          */
@@ -879,7 +1058,6 @@
                 $query = $this->_build_insert();
             }
 
-            self::_setup_db();
             self::_log_query($query, $values);
             $statement = self::$_db->prepare($query);
             $success = $statement->execute($values);
@@ -892,6 +1070,7 @@
                 }
             }
 
+            $this->_dirty_fields = array();
             return $success;
         }
 
@@ -940,7 +1119,6 @@
                 "= ?",
             ));
             $params = array($this->id());
-            self::_setup_db();
             self::_log_query($query, $params);
             $statement = self::$_db->prepare($query);
             return $statement->execute($params);
@@ -955,6 +1133,10 @@
 
         public function __set($key, $value) {
             $this->set($key, $value);
+        }
+
+        public function __isset($key) {
+            return isset($this->_data[$key]);
         }
     }
 
