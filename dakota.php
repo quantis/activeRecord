@@ -125,9 +125,7 @@
                 $this->where_id_is($id);
             }
             $this->limit(1);
-            $statement = $this->_run();
-            $result = $statement->fetch(PDO::FETCH_ASSOC);
-            return $result ? $this->hydrate($result)->not_new() : $this;
+            return $result ? $this->hydrate($this->_run())->not_new() : $this;
         }
 
         /**
@@ -136,9 +134,9 @@
          * class.
          */
         public function find_many() {
-            $statement = $this->_run();
+            $rows = $this->_run();
             $instances = array();
-            while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
+            foreach ($rows as $row) {
                 $instances[] = $this->_for_table($this->_table_name)
                   ->use_id_column($this->_instance_id_column)
                   ->hydrate($row)
