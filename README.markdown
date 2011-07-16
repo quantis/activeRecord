@@ -26,6 +26,15 @@ Philosophy
 
 Dakota is built with the same *less is more* philosophy as [Idiorm](http://github.com/j4mie/idiorm/).
 
+### What's different from Paris? ###
+
+* Model instantiation is more like [Kohana's ORM](http://kohanaframework.org/3.1/guide/orm/using)
+  * the `new` operator works as expected, e.g. `$user = new User;`
+  * a model instance represents a new row unless `find_one()` or `find_many()` is used
+  * therefore the `create()` method is unnecessary and has been removed
+* Filters are simpler because model class methods can call query builder functions on `$this`
+* Transaction functions are made available in `Model::`
+
 Let's See Some Code
 -------------------
 
@@ -314,7 +323,7 @@ It is often desirable to create reusable queries that can be used to extract par
 It is easiest to illustrate this with an example. Imagine an application in which users can be assigned a role, which controls their access to certain pieces of functionality. In this situation, you may often wish to retrieve a list of users with the role 'admin'. To do this, add a method called (for example) `admins` to your Model class:
 
     class User extends Model {
-        public function admins($orm) {
+        public function admins() {
             return $this->where('role', 'admin');
         }
     }
