@@ -1,8 +1,9 @@
 Dakota
 ======
 
-A lightweight Active Record implementation for PHP5.
+*Your best friend for hauling data in and out of MySQL.*
 
+A lightweight Active Record implementation for PHP5.
 Built on top of [Idiorm](http://github.com/j4mie/idiorm/).
 Forked from [Paris](http://github.com/j4mie/paris/).
 
