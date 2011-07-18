@@ -33,7 +33,7 @@ Dakota is built with the same *less is more* philosophy as [Idiorm](http://githu
   * the `new` operator works as expected, e.g. `$user = new User;`
   * a model instance represents a new row unless `find_one()` or `find_many()` is used
   * therefore the `create()` method is unnecessary and has been removed
-  * `find_one()` won't return FALSE if it doesn't load a row; use the new `loaded()` method to check for this
+  * `find_one()` won't return `FALSE` if it doesn't load a row; use the new `loaded()` method to check for this
 * Filters are simpler because model class methods can call query builder functions on `$this`
 * Transaction functions are made available in `Model::`
 
