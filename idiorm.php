@@ -1,5 +1,13 @@
 <?php
-
+    /**
+     * @author Erik Wiesenthal
+     * @email erikwiesenthal@hotmail.com
+     * @project Granada
+     * @copyright 2012
+     * 
+     * Fork of Idiorm http://github.com/j4mie/idiorm/
+     * minor changes, new methods...
+    */
     /**
      *
      * Idiorm

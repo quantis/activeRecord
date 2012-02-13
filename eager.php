@@ -1,19 +1,22 @@
 <?php
+/**
+ * @author Erik Wiesenthal
+ * @email erikwiesenthal@hotmail.com
+ * @project Granada
+ * @copyright 2012
+ * 
+ * Mashed from eloquent https://github.com/taylorotwell/eloquent
+ * to works with idiorm + https://github.com/powerpak/dakota
+ * 
+ */  
 
 class Eager
 {
-	/**
-	 * Look for relations   ( if we called with, look for that methods on this model instance) if ( ! method_exists($model, $include))
-	 * foreach method "included" call a "eagerly" function wich
-	 *    
-	 *     we have the results, hence we have the array keys from the resultset
-     *     we ask each relationship "included" against that resultset keys             
-	 *           now we will have a looong array without any order, but we must assign it to the key it references 
-	 *           so we must ask to the references to return the results grouped by the key it references
-     *     we have an array with keys (parent's keys) and it's related references, assign it to a ['reference model table name'] key (and add that key to the ignored for dirty)
-	 *     done
-	 */ 
-
+    /**
+     * 
+     * Attempts to execute any relationship defined for eager loading
+     * 
+     */
 	public static function hydrate($model, &$results)
 	{
 		if (count($results) > 0)

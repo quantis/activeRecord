@@ -1,5 +1,13 @@
 <?php
 /**
+ * @author Erik Wiesenthal
+ * @email erikwiesenthal@hotmail.com
+ * @project Granada
+ * @copyright 2012
+ * 
+ * Granada is a fork from https://github.com/powerpak/dakota
+ * Minor changes + eager loading
+ * 
  * Subclass of Idiorm's ORM class that supports
  * returning instances of a specified class rather
  * than raw instances of the ORM class.
