@@ -3,7 +3,7 @@ Granada
 
 *A mashed idiorm-dakota-eloquent library
 
-A lightweight Active Record implementation for PHP5 with eager loading.
+A lightweight (with eager loading) Active Record implementation for PHP5.3
 Built on top of [Idiorm](http://github.com/j4mie/idiorm/).
 Forked from [Dakota](http://github.com/powerpak/dakota/).
 Using code from [eloquent](https://github.com/taylorotwell/eloquent/).
