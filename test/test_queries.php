@@ -9,8 +9,9 @@
      *
      */
 
-    require_once dirname(__FILE__) . "/idiorm.php";
-    require_once dirname(__FILE__) . "/../dakota.php";
+    require_once dirname(__FILE__) . "/../idiorm.php";
+    require_once dirname(__FILE__) . "/../eager.php";
+    require_once dirname(__FILE__) . "/../granada.php";
     require_once dirname(__FILE__) . "/test_classes.php";
 
     // Enable logging
@@ -50,7 +51,7 @@
 
     Model::factory('ModelWithCustomTableAndCustomIdColumn')->find_one(5);
     $expected = "SELECT * FROM `custom_table` WHERE `custom_id_column` = '5' LIMIT 1";
-    Tester::check_query("Custom ID column", $expected);
+    Tester::check_query("Custom ID column", $expected); 
 
     class ModelWithFilters extends Model {
 
@@ -70,7 +71,6 @@
     Model::factory('ModelWithFilters')->name_is('Bob')->find_many();
     $expected = "SELECT * FROM `model_with_filters` WHERE `name` = 'Bob'";
     Tester::check_query("Filter with arguments", $expected);
-
     class Widget extends Model {
     }
 
@@ -78,6 +78,7 @@
     $widget->name = "Fred";
     $widget->age = 10;
     $widget->save();
+
     $expected = "INSERT INTO `widget` (`name`, `age`) VALUES ('Fred', '10')";
     Tester::check_query("Insert data", $expected);
     
