@@ -197,10 +197,10 @@ class Model extends ORMWrapper {
     
     // Default ID column for all models. Can be overridden by adding
     // a public static _id_column property to your model classes.
-    const DEFAULT_ID_COLUMN = 'id';
+    const DEFAULT_ID_COLUMN = 'pk';
 
     // Default foreign key suffix used by relationship methods
-    const DEFAULT_FOREIGN_KEY_SUFFIX = '_id';
+    const DEFAULT_FOREIGN_KEY_SUFFIX = '_fk';
     
 	/**
 	 * The model's ignored attributes.

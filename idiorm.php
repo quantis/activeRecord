@@ -70,7 +70,7 @@
             'password' => null,
             'driver_options' => null,
             'identifier_quote_character' => null, // if this is null, will be autodetected
-            'logging' => false,
+            'logging' => LOGGIN,
             'caching' => false,
         );
 
@@ -195,7 +195,7 @@
                 $db->setAttribute(PDO::ATTR_ERRMODE, self::$_config['error_mode']);
                 self::set_db($db);
                 
-                //if(LOGGIN) $query = self::get_db()->prepare("SET profiling = 1, profiling_history_size = 100")->execute();
+                if (self::$_config['logging']) $query = self::get_db()->prepare("SET profiling = 1, profiling_history_size = 100")->execute();
             }
         } 
 
