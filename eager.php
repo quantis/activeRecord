@@ -23,12 +23,15 @@ class Eager
 		{
     		foreach ($model->includes as $include)
     		{
-    			if ( ! method_exists($model, $include))
+    		    $relationship      = (is_array($include))?key($include):$include;
+                $relationship_args = (is_array($include))?$include[$relationship]:array();     
+                
+    			if ( ! method_exists($model, $relationship))
     			{
-    				throw new \LogicException("Attempting to eager load [$include], but the relationship is not defined.");
+    				throw new \LogicException("Attempting to eager load [$relationship], but the relationship is not defined.");
     			}
     
-    			static::eagerly($model, $results, $include);
+    			static::eagerly($model, $results, $relationship, $relationship_args);
     		}
         } 
         
@@ -43,9 +46,10 @@ class Eager
 	 * @param  string  $include
 	 * @return void 
 	 */
-	private static function eagerly($model, &$parents, $include)
+	private static function eagerly($model, &$parents, $include, $relationship_args)
 	{
-		$relationship = $model->$include()->reset_relation();
+	    $relationship = call_user_func_array(array($model,$include),$relationship_args);
+		$relationship->reset_relation();
 
 		// Initialize the relationship attribute on the parents. As expected, "many" relationships
 		// are initialized to an array and "one" relationships are initialized to null.
@@ -77,7 +81,11 @@ class Eager
 	 */
 	private static function has_one($relationship, &$parents, $relating_key, $include)
 	{
-		$parents[$child->$relating_key]->ignore[$include] = $relationship->where_in($relating_key, array_keys($parents))->find_one()->loaded();
+	    $related = $relationship->where_in($relating_key, array_keys($parents))->group_by($relating_key)->find_many();
+        foreach ($related as $key => $child)
+		{  
+            $parents[$child->$relating_key]->ignore[$include] = $child;
+        }		
 	}
      
 
