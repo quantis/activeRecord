@@ -134,7 +134,6 @@ class ORMWrapper extends ORM {
         return $this->where_in($this->_instance_id_column, $elements);
     }
 
-
     /**
      * Return array as result, no instance needed
      * 
@@ -142,6 +141,17 @@ class ORMWrapper extends ORM {
     public function find_array() {
         return $this->_run(); 
     }
+    
+    /**
+     * Return pairs as result, no instance needed
+     * 
+     */
+    public function find_pairs($key = false, $value = false) {
+        $key   = ($key)?$key:'pk';
+        $value = ($value)?$value:'name';      
+        return Surt_Array::assoc_to_keyval($this->select("$key,$value")->order_by_asc($value)->find_array(), $key,$value);
+    } 
+      
     
     /**
      * Did we load any rows from the last query?
@@ -334,8 +344,11 @@ class Model extends ORMWrapper {
      */
     public static function factory($class_name) {
         return new $class_name;
-    }    
+    }        
     
+    protected function has_none(){
+        return self::factory('None');
+    }     
     
     /**
      * Internal method to construct the queries for both the has_one and
@@ -499,12 +512,23 @@ class Model extends ORMWrapper {
 	{
 		unset($this->_data[$key], $this->ignore[$key], $this->_dirty_fields[$key]);
 	}
+}
 
+class None extends Model {
     
+    public function find_one($id=null) {
+        return array();
+    }
     
+    public function find_many() {
+        return array();
+    }          
     
+    public function loaded() {
+        return false;
+    }
     
-    
-    
-    
+    public function with(){
+        return $this;
+    } 
 }

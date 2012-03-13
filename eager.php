@@ -23,20 +23,31 @@ class Eager
 		{
     		foreach ($model->includes as $include)
     		{
-    		    $relationship      = (is_array($include))?key($include):$include;
-                $relationship_args = (is_array($include))?$include[$relationship]:array();     
+                $relationship      = (is_array($include))?key($include):$include;
+                $relationship_args = array();
+                $relationship_with = false;
+                
+                // check args and eager loading for relationships
+                if(is_array($include)){
+                    if(isset($include[$relationship]['with'])){
+                        $relationship_with = $include[$relationship]['with'];
+                        unset($include[$relationship]['with']);    // don't add eager loading relationships for the eager load args
+                    }                   
+                    $relationship_args = $include[$relationship];    
+                }
                 
     			if ( ! method_exists($model, $relationship))
     			{
     				throw new \LogicException("Attempting to eager load [$relationship], but the relationship is not defined.");
     			}
     
-    			static::eagerly($model, $results, $relationship, $relationship_args);
+    			static::eagerly($model, $results, $relationship, $relationship_args, $relationship_with);
     		}
         } 
         
         return $results;
 	}
+    
     
 	/**
 	 * Eagerly load a relationship.
@@ -46,28 +57,37 @@ class Eager
 	 * @param  string  $include
 	 * @return void 
 	 */
-	private static function eagerly($model, &$parents, $include, $relationship_args)
+	private static function eagerly($model, &$parents, $include, $relationship_args = array(), $relationship_with = false)
 	{
-	    $relationship = call_user_func_array(array($model,$include),$relationship_args);
-		$relationship->reset_relation();
-
-		// Initialize the relationship attribute on the parents. As expected, "many" relationships
-		// are initialized to an array and "one" relationships are initialized to null.
-		foreach ($parents as &$parent)
-		{
-			$parent->ignore[$include] = (in_array($model->relating, array('has_many', 'has_and_belongs_to_many'))) ? array() : null;
-		}
-
-		if (in_array($relating = $model->relating, array('has_one', 'has_many', 'belongs_to')))
-		{
-			return static::$relating($relationship, $parents, $model->relating_key, $include);			
-		}
-		else
-		{
-			static::has_and_belongs_to_many($relationship, $parents, $model->relating_key, $model->relating_table, $include);
-		}
-       
+	    if($relationship = call_user_func_array(array($model,$include),$relationship_args)){
+    		$relationship->reset_relation();
+            if($relationship_with) $relationship->with($relationship_with);
+            
+            
+            
+     
+    		// Initialize the relationship attribute on the parents. As expected, "many" relationships
+    		// are initialized to an array and "one" relationships are initialized to null.
+    		foreach ($parents as &$parent)
+    		{
+    			$parent->ignore[$include] = (in_array($model->relating, array('has_many', 'has_and_belongs_to_many'))) ? array() : null;
+    		}
+    
+    		if (in_array($relating = $model->relating, array('has_one', 'has_many', 'belongs_to')))
+    		{
+    			return static::$relating($relationship, $parents, $model->relating_key, $include);			
+    		}
+    		else
+    		{
+    			static::has_and_belongs_to_many($relationship, $parents, $model->relating_key, $model->relating_table, $include);
+    		}
+        }
 	}
+    
+    
+    public static function has_none(){
+        return false;
+    }
     
 	/**
 	 * Eagerly load a 1:1 relationship.
@@ -103,7 +123,7 @@ class Eager
 	{
 	    $related = $relationship->where_in($relating_key, array_keys($parents))->find_many();
 		foreach ($related as $key => $child)
-		{  
+		{   
 			$parents[$child->$relating_key]->ignore[$include][$child->id()] = $child;
 		}
 	} 
@@ -121,16 +141,31 @@ class Eager
 	 */
 	private static function belongs_to($relationship, &$parents, $relating_key, $include)
 	{
-		$related = $relationship->where_id_in(array_keys($parents))->find_many();
+		//$related = $relationship->where_id_in(array_keys($parents))->find_many();
 
-		foreach ($parents as &$parent)
-		{
-			if (array_key_exists($parent->$relating_key, $related))
-			{
-				$parent->ignore[$include] = $related[$parent->$relating_key];
-			}
-		}
-	}
+        foreach ($parents as &$parent)
+        {
+            $keys[] = $parent->$relating_key;
+        }
+        
+        $children = $relationship->where_id_in(array_unique($keys))->find_many();
+        
+        foreach ($parents as &$parent)
+        {
+            if (array_key_exists($parent->$relating_key, $children))
+            {
+                $parent->ignore[$include] = $children[$parent->$relating_key];
+            }
+        }	
+    }
+
+
+
+
+
+
+
+
 
 	/**
 	 * Eagerly load a many-to-many relationship.
