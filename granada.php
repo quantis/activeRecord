@@ -149,7 +149,7 @@ class ORMWrapper extends ORM {
     public function find_pairs($key = false, $value = false) {
         $key   = ($key)?$key:'pk';
         $value = ($value)?$value:'name';      
-        return Surt_Array::assoc_to_keyval($this->select("$key,$value")->order_by_asc($value)->find_array(), $key,$value);
+        return Surt_Array::assoc_to_keyval($this->select_raw("$key,$value")->order_by_asc($value)->find_array(), $key, $value);
     } 
       
     

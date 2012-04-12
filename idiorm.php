@@ -786,8 +786,9 @@
         /**
          * Add a LIMIT WITH OFFSET to the query
          */
-        public function limit_by($limit) {
+        public function limit_by($limit, $offset) {
             $this->_limit = $limit;
+            $this->_offset = $offset; 
             return $this; 
         }
 
