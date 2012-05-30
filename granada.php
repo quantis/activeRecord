@@ -173,17 +173,36 @@ class ORMWrapper extends ORM {
      * 
      * To save multiple elements, easy way
      * Using multiple arrays array('name'=>'value',...), array('name2'=>'value2',...) 
+     * or a array multiple
      * 
      */     
     public function insert($rows) {
         self::$_db->beginTransaction();
-        foreach(func_get_args() as $row){
+        foreach($rows as $row){
             $this->_for_table($this->_table_name)->use_id_column($this->_instance_id_column)->create($row)->save();
         } 
         self::$_db->commit(); 
         return $this->get_db()->lastInsertId(); 
     }     
 
+
+
+    /** 
+     * 
+     * To save multiple elements, easy way
+     * Using multiple arrays array('name'=>'value',...), array('name2'=>'value2',...) 
+     * or a array multiple
+     * 
+     */     
+    public function insert_multiple($rows) {
+        self::$_db->beginTransaction();
+        $rows = func_get_args(); 
+        foreach($rows as $row){
+            $this->_for_table($this->_table_name)->use_id_column($this->_instance_id_column)->create($row)->save();
+        }
+        self::$_db->commit(); 
+        return $this->get_db()->lastInsertId(); 
+    }    
     /**
      * 
      * Update multiple properties at once for one instance
