@@ -172,7 +172,7 @@ class ORMWrapper extends ORM {
     /** 
      * 
      * To save multiple elements, easy way
-     * Using multiple arrays array('name'=>'value',...), array('name2'=>'value2',...) 
+     * Using an array with rows array(array('name'=>'value',...), array('name2'=>'value2',...),..) 
      * or a array multiple
      * 
      */     
