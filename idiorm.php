@@ -70,7 +70,7 @@
             'password' => null,
             'driver_options' => null,
             'identifier_quote_character' => null, // if this is null, will be autodetected
-            'logging' => LOGGIN,
+            'logging' => false,
             'caching' => false,
         );
 
@@ -1334,8 +1334,8 @@
             return isset($this->_data[$key]);
         } 
                 
-        public function getLog(){
-            if(LOGGIN) {
+        public function getLog(){ 
+            if(self::$_config['logging']) {
                 // profiles
         		$query = self::get_db()->prepare("SHOW profiles");
         		$query->execute();
