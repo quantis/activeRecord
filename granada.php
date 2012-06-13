@@ -203,13 +203,14 @@ class ORMWrapper extends ORM {
         self::$_db->commit(); 
         return $this->get_db()->lastInsertId(); 
     }    
+
     /**
      * 
      * Update multiple properties at once for one instance
      * 
      */      
     public function update($data){
-        return $this->set($data)->force_all_dirty($data)->save(); 
+        return $this->set($data)->save(); 
     }  
     
 }
