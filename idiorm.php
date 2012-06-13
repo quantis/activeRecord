@@ -1260,7 +1260,7 @@
             $placeholders = $this->_create_placeholders(count($this->_dirty_fields));       
             $query[] = "({$placeholders})";
             
-            $query[] = " ON DUPLICATE KEY UPDATE ".$this->_get_id_column_name()." = LAST_INSERT_ID(".$this->_get_id_column_name()."), "; 
+            $query[] = " ON DUPLICATE KEY UPDATE "; 
             $query[] =  implode(" = ?, ", $field_list)." = ? "; 
             return implode(" ", $query);
         } 
