@@ -34,10 +34,10 @@ will give you all the Users, each one with its avatar and it post. Of course you
          public static $_table = 'user';
           
          public function post(){
-               return $this->has_many('post');
+               return $this->has_many('Post');
          }
-         public function post(){
-               return $this->has_one('avatar');
+         public function avatar(){
+               return $this->has_one('Avatar');
          }
    }
 </code></pre>
