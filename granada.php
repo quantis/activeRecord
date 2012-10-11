@@ -457,13 +457,15 @@ class Model extends ORMWrapper {
     }    
     
     
-    
 	/**
 	 * Magic method for retrieving model attributes.
 	 */
-	public function __get($key)
+	public function get($key)
 	{
-		if (array_key_exists($key, $this->_data))
+        if (method_exists($this, 'get_'.$key)) {
+	      return $this->{'get_'.$key}();
+	    } 
+        elseif (array_key_exists($key, $this->_data))
 		{
 			return $this->_data[$key];
 		}
@@ -480,6 +482,8 @@ class Model extends ORMWrapper {
 			$relation = $this->$key();
 			return $this->ignore[$key] = (in_array($this->relating, array('has_one', 'belongs_to'))) ? $relation->find_one() : $relation->find_many();
 		}
+        else  
+            $result = false;
 	}
     
     
@@ -496,7 +500,7 @@ class Model extends ORMWrapper {
             $this->_data[$field] = $value;   
             $this->_dirty_fields[$field] = $value;   
         }
-        return $this;
+        return $this; 
     } 
      
 

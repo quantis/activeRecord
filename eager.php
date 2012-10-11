@@ -58,13 +58,11 @@ class Eager
 	 * @return void 
 	 */
 	private static function eagerly($model, &$parents, $include, $relationship_args = array(), $relationship_with = false)
-	{
+	{       
 	    if($relationship = call_user_func_array(array($model,$include),$relationship_args)){
+           
     		$relationship->reset_relation();
             if($relationship_with) $relationship->with($relationship_with);
-            
-            
-            
      
     		// Initialize the relationship attribute on the parents. As expected, "many" relationships
     		// are initialized to an array and "one" relationships are initialized to null.
@@ -121,6 +119,7 @@ class Eager
 	 */
 	private static function has_many($relationship, &$parents, $relating_key, $include)
 	{
+           
 	    $related = $relationship->where_in($relating_key, array_keys($parents))->find_many();
 		foreach ($related as $key => $child)
 		{   

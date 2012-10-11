@@ -187,11 +187,7 @@
          */
         protected static function _setup_db() {
             if (!is_object(self::$_db)) {
-                $connection_string = self::$_config['connection_string'];
-                $username = self::$_config['username'];
-                $password = self::$_config['password'];
-                $driver_options = self::$_config['driver_options'];
-                $db = new PDO($connection_string, $username, $password, $driver_options);
+                $db = new PDO(self::$_config['connection_string'], self::$_config['username'], self::$_config['password'], self::$_config['driver_options']);
                 $db->setAttribute(PDO::ATTR_ERRMODE, self::$_config['error_mode']);
                 self::set_db($db);
                 
@@ -1103,13 +1099,19 @@
          */
         public function get($key) {
             //return isset($this->_data[$key]) ? $this->_data[$key] : null;
-            if(isset($this->_data[$key])){
+            if (method_exists($this, 'get_'.$key)) {
+		      return $this->{'get_'.$key}();
+		    } 
+            if(isset($this->_data[$key]) && !empty($this->_data[$key])){ 
                 $result = $this->_data[$key];
             }
-            elseif(isset($this->$key)){
-                $result = $this->$key;
+            elseif(isset($this->$key) && !empty($this->$key)){
+                $result = $this->$key; 
             }
-            else
+            elseif(method_exists($this, $key)){
+                $result = $this->$key();
+            }
+            else  
                 $result = false;
             
             return $result;
@@ -1334,20 +1336,22 @@
             return isset($this->_data[$key]);
         } 
                 
-        public function getLog(){ 
+        public function getLog(){
             if(self::$_config['logging']) {
                 // profiles
         		$query = self::get_db()->prepare("SHOW profiles");
         		$query->execute();
         		$profile = $query->fetchAll(PDO::FETCH_ASSOC);
         
-                // total time
-                $query = self::get_db()->prepare("SELECT SUM(Duration), MAX(Query_ID) as total_time FROM information_schema.profiling ");
-                $query->execute();
-                $total_time = $query->fetch(); 
-     
-                array_unshift($profile, array('Query_ID' => 'TOTAL TIME', 'Duration' => $total_time[0], 'Query' => $total_time[1]. ' queries'));
-                return $profile;
+                if($profile){
+                    // total time
+                    $query = self::get_db()->prepare("SELECT SUM(Duration)*1000, MAX(Query_ID) as total_time FROM information_schema.profiling ");
+                    $query->execute();
+                    $total_time = $query->fetch(); 
+         
+                    array_unshift($profile, array('Query_ID' => 'TOTAL', 'Duration' => $total_time[0].' ms', 'Query' => $total_time[1]. ' queries'));                   
+                    Surt_Log::table("Database", $profile);
+                }
             }
         } 
         
