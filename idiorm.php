@@ -71,6 +71,7 @@
             'driver_options' => null,
             'identifier_quote_character' => null, // if this is null, will be autodetected
             'logging' => false,
+            'profile' => false,
             'caching' => false,
         );
 
@@ -192,7 +193,7 @@
                 
                 self::set_db($db);
                 
-                if (self::$_config['logging']) $query = self::get_db()->prepare("SET profiling = 1, profiling_history_size = 100")->execute();
+                if (self::$_config['profile']) $query = self::get_db()->prepare("SET profiling = 1, profiling_history_size = 100")->execute();
             }
         } 
 
@@ -1338,20 +1339,20 @@
         } 
                 
         public function getLog(){
-            if(self::$_config['logging']) {
+            if(self::$_config['profile']) { 
                 // profiles
         		$query = self::get_db()->prepare("SHOW profiles");
         		$query->execute();
         		$profile = $query->fetchAll(PDO::FETCH_ASSOC);
         
-                if($profile){
+                if($profile){ 
                     // total time
                     $query = self::get_db()->prepare("SELECT SUM(Duration)*1000, MAX(Query_ID) as total_time FROM information_schema.profiling ");
                     $query->execute();
                     $total_time = $query->fetch(); 
          
                     array_unshift($profile, array('Query_ID' => 'TOTAL', 'Duration' => $total_time[0].' ms', 'Query' => $total_time[1]. ' queries'));                   
-                    Surt_Log::table("Database", $profile);
+                    return $profile;
                 }
             }
         } 
