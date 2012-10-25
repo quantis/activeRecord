@@ -1183,7 +1183,7 @@
                 if(!empty($this->_data[$this->_get_id_column_name()]) && $this->is_dirty('pk')){
                     $this->_is_new = false;  
                     $this->find_one($this->id());  
-                }    
+                }
                  
                 if (!$this->_is_new) { // UPDATE
                     // If there are no dirty values, do nothing

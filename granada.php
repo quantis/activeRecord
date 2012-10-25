@@ -317,6 +317,9 @@ class Model extends ORMWrapper
      */
     protected static function _get_static_property($class_name, $property, $default = null)
     {
+        if(!isset(static::$$property)) return $default;
+        
+        return static::$$property;
         if (!class_exists($class_name) || !property_exists($class_name, $property)) {
             return $default;
         }
@@ -655,10 +658,22 @@ class ModelMapper extends Model
         return parent::__get($key);
     }
     
+    public function get($key)
+    {
+        self::_get_field_by_column($key);
+        return parent::get($key);
+    }
+    
     public function __set($key, $value)
     {
         self::_get_column_by_field($key);
         return parent::__set($key, $value);
+    }
+    
+    public function set($key, $value)
+    {
+        self::_get_column_by_field($key);
+        return parent::set($key, $value);
     }
     
     public function __isset($key)
