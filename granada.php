@@ -564,6 +564,22 @@ class Model extends ORMWrapper
     {
         unset($this->_data[$key], $this->ignore[$key], $this->_dirty_fields[$key]);
     }
+    
+    /**
+     * for PHP 5.4 jsonSerializable interface
+     * @return array
+     */
+    public function jsonSerialize() {
+        return $this->_data;
+    }
+    
+    /**
+     * transforme object to Json
+     * @return string json encoded
+     */
+    public function getJson(){
+        return json_encode($this->jsonSerialize());
+    }
 
 }
 
