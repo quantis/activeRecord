@@ -230,20 +230,44 @@ class ORMWrapper extends ORM
 
 class Model extends ORMWrapper
 {
-    // Default ID column for all models. Can be overridden by adding
-    // a public static _id_column property to your model classes.
 
+    /**
+     * =============
+     * CONFIGURATION
+     * =============
+     */
+
+    /**
+     * Default ID column name for all models. 
+     * Can be overridden by adding a public static _id_column property to your model classes.
+     * @var string 
+     */
     const DEFAULT_ID_COLUMN = 'id';
 
-    // Default foreign key suffix used by relationship methods
+    /**
+     * Default foreign key suffix used by relationship methods
+     * @var string
+     */
     const DEFAULT_FOREIGN_KEY_SUFFIX = '_id';
 
     /**
+     * Array of aliases attributes to database fields 
+     * @example array('db_field' => 'attribute_aliase');
+     * @var array
+     */
+    public static $_aliases_fields_map = array();
+    
+    /**
+     * Array of database fields whith aliases attributes
+     * @example array('attribute_aliase' => 'db_field');
+     * @var array 
+     */
+    public static $_aliases_attributes_map = array();
+    
+    /**
      * The model's ignored attributes.
-     *
-     * Ignored attributes will not be saved to the database, and are
-     * primarily used to hold relationships.
-     *
+     * Ignored attributes will not be saved to the database, 
+     * and are primarily used to hold relationships.
      * @var array
      */
     public $ignore = array();
@@ -287,6 +311,50 @@ class Model extends ORMWrapper
     );
 
     /**
+     * =====================
+     * CONSTRUCTOR & FACTORY
+     * =====================
+     */
+    
+     /**
+     * Magic function so that new operator works as expected
+     */
+    public function __construct()
+    {
+        //map the aliases fields
+        self::_map_aliases();
+        
+        //get class name
+        $class_name = get_called_class();
+        
+        //get table name
+        $table_name = self::_get_table_name($class_name);
+        
+        //parent constructor
+        parent::__construct($table_name);
+        
+        //set class name
+        $this->set_class_name($class_name);
+        
+        //set id column
+        $this->use_id_column(self::_id_column_name($class_name));
+    }
+
+    
+    /**
+     * Factory method used to acquire instances of the given class.
+     * The class name should be supplied as a string, and the class
+     * should already have been loaded by PHP (or a suitable autoloader
+     * should exist).  Basically a wrapper for the new operator to facilitate
+     * chaining.
+     */
+    public static function factory($class_name)
+    {
+        return new $class_name;
+    }
+
+    
+    /**
      * Set the eagerly loaded models on the queryable model.
      *
      * @return Model
@@ -296,18 +364,6 @@ class Model extends ORMWrapper
         $this->includes = func_get_args();
 
         return $this;
-    }
-
-    /**
-     * Magic function so that new operator works as expected
-     */
-    public function __construct()
-    {
-        $class_name = get_class($this);
-        $table_name = self::_get_table_name($class_name);
-        parent::__construct($table_name);
-        $this->set_class_name($class_name);
-        $this->use_id_column(self::_id_column_name($class_name));
     }
 
     /**
@@ -382,18 +438,6 @@ class Model extends ORMWrapper
             return $specified_foreign_key_name;
         }
         return $table_name . self::DEFAULT_FOREIGN_KEY_SUFFIX;
-    }
-
-    /**
-     * Factory method used to acquire instances of the given class.
-     * The class name should be supplied as a string, and the class
-     * should already have been loaded by PHP (or a suitable autoloader
-     * should exist).  Basically a wrapper for the new operator to facilitate
-     * chaining.
-     */
-    public static function factory($class_name)
-    {
-        return new $class_name;
     }
 
     protected function has_none()
@@ -493,10 +537,22 @@ class Model extends ORMWrapper
     }
 
     /**
+     * =================
+     * GETTERS & SETTERS
+     * =================
+     */
+    
+    /**
      * Magic method for retrieving model attributes.
+     * 
+     * @param string $key attribute's name
+     * @return mixed
      */
     public function get($key)
     {
+        //aliases support
+        $key = self::_get_field_by_column($key);
+        
         if (method_exists($this, 'get_' . $key)) {
             return $this->{'get_' . $key}();
         } elseif (array_key_exists($key, $this->_data)) {
@@ -525,9 +581,17 @@ class Model extends ORMWrapper
      * Set a property to a particular value on this object.
      * Flags that property as 'dirty' so it will be saved to the
      * database when save() is called.
+     * 
+     * @param string $key attribute's name
+     * @param mixed $value attribute's value
+     * @return mixed
      */
     public function set($key, $value = null)
     {
+        
+        //aliases support
+        $key = self::_get_field_by_column($key);
+        
         if (!is_array($key)) {
             $key = array($key => $value);
         }
@@ -539,10 +603,36 @@ class Model extends ORMWrapper
     }
 
     /**
+     * =============
+     * MAGIC METHODS 
+     * =============
+     */
+    
+    /**
+     * Magic method to get model attributes.
+     * Added for aliases support
+     * @param string $key attribute's name
+     * @return mixed 
+     */
+    public function __get($key)
+    {
+        //aliases support
+        $key = self::_get_field_by_column($key);
+        return $this->get($key);
+    }
+    
+    
+    /**
      * Magic Method for setting model attributes.
+     * @param string $key attribute's name
+     * @param mixed attribute's value
+     * @return mixed
      */
     public function __set($key, $value)
     {
+        //aliases support
+        $key = self::_get_field_by_column($key);
+        
         // If the key is a relationship, add it to the ignored attributes.
         // Ignored attributes are not stored in the database.
         if (method_exists($this, $key)) {
@@ -554,9 +644,14 @@ class Model extends ORMWrapper
 
     /**
      * Magic Method for determining if a model attribute is set.
+     * @param string $key attribute's name
+     * @return boolean 
      */
     public function __isset($key)
     {
+        //aliases support
+        $key = self::_get_field_by_column($key);
+        
         return (array_key_exists($key, $this->_data) or array_key_exists($key, $this->ignore));
     }
 
@@ -565,8 +660,56 @@ class Model extends ORMWrapper
      */
     public function __unset($key)
     {
+        //aliases support
+        $key = self::_get_field_by_column($key);
+        
         unset($this->_data[$key], $this->ignore[$key], $this->_dirty_fields[$key]);
     }
+    
+    /**
+     * =================
+     * ALIASES FUNCTIONS
+     * =================
+     */
+    
+    /**
+     * Return the column name of the associated field
+     * @param string $field_name field's name
+     * @return string column's name
+     */
+    protected static function _get_column_by_field($field_name)
+    {
+        return (isset(static::$_aliases_fields_map[$field_name])) ? static::$_aliases_fields_map[$field_name] : $field_name;
+    }
+    /**
+     * Return the field associated at the aliase attribute
+     * @param string $column_name
+     * @return string 
+     */
+    protected static function _get_field_by_column($column_name)
+    {
+        return (isset(static::$_aliases_attributes_map[$column_name])) ? static::$_aliases_attributes_map[$column_name] : $column_name;
+    }
+    
+    /**
+     * populate aliases mapping by revert key/values from the other mapping
+     */
+    private static function _map_aliases()
+    {
+        if(empty(static::$_aliases_attributes_map))
+            if(!empty(static::$_aliases_fields_map))
+                static::$_aliases_attributes_map = array_flip (static::$_aliases_fields_map);
+            
+        if(empty(static::$_aliases_fields_map))
+            if(!empty(static::$_aliases_attributes_map))
+                static::$_aliases_fields_map = array_flip (static::$_aliases_attributes_map);
+    }
+    
+    /**
+     * ===================
+     * SERIALIZE FUNCTIONS
+     * ===================
+     */
     
     /**
      * for PHP 5.4 jsonSerializable interface
@@ -609,88 +752,4 @@ class None extends Model
         return $this;
     }
 
-}
-
-class ModelMapper extends Model
-{
-    
-    public static $_aliases_fields_map = array();
-    
-    public static $_aliases_attributes_map = array();
-    
-    public function __construct()
-    {
-        self::_map_aliases();
-        parent::__construct();
-    }
-    
-    protected static function _get_column_by_field($field_name)
-    {
-        return (isset(static::$_aliases_fields_map[$field_name])) ? static::$_aliases_fields_map[$field_name] : $field_name;
-    }
-    
-    protected static function _get_field_by_column($column_name)
-    {
-        return (isset(static::$_aliases_attributes_map[$column_name])) ? static::$_aliases_attributes_map[$column_name] : $column_name;
-    }
-    
-    /**
-     * populate aliases mapping by revert key/values from the other mapping
-     */
-    private static function _map_aliases()
-    {
-        if(empty(static::$_aliases_attributes_map))
-            if(!empty(static::$_aliases_fields_map))
-                static::$_aliases_attributes_map = array_flip (static::$_aliases_fields_map);
-            
-        if(empty(static::$_aliases_fields_map))
-            if(!empty(static::$_aliases_attributes_map))
-                static::$_aliases_fields_map = array_flip (static::$_aliases_attributes_map);
-            
-            var_dump(static::$_aliases_attributes_map);echo '<br />';
-            var_dump(static::$_aliases_fields_map);echo '<br />';
-    }
-    
-    /**
-     * MAGIC METHODS REPLACEMENT
-     */
-    
-    public function __get($key)
-    {
-        $key = self::_get_field_by_column($key);
-        return parent::__get($key);
-    }
-    
-    public function get($key)
-    {
-        $key = self::_get_field_by_column($key);
-        return parent::get($key);
-    }
-    
-    public function __set($key, $value)
-    {
-        $key = self::_get_field_by_column($key);
-        return parent::__set($key, $value);
-    }
-    
-    public function set($key, $value)
-    {
-        $key = self::_get_field_by_column($key);
-        return parent::set($key, $value);
-    }
-    
-    public function __isset($key)
-    {
-        $key = self::_get_field_by_column($key);
-        return parent::__isset($key);
-    }
-    
-    public function __unset($key)
-    {
-        $key = self::_get_field_by_column($key);
-        return parent::__unset($key);
-    }
-    
-
-    
 }

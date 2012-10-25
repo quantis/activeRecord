@@ -5,39 +5,43 @@
     require_once dirname(__FILE__) . "/../granada.php";
     require_once dirname(__FILE__) . "/test_classes.php";
     
-    class utilisateur extends ModelMapper{
+    class utilisateur extends Model{
         
         static public $_aliases_fields_map = array(
-            'name' => 'nom',
+            'nom' => 'name',
+            'prenom' => 'surname'
         );
         
         static public $_table = 'user';
     }
     
     ORM::configure('logging', true);
+    ORM::configure('connection_string', 'mysql:dbname=test;host=localhost');
+    ORM::configure('username','root');
+    ORM::configure('password','');
 
-    // Set up the dummy database connection
-    $db = new DummyPDO('sqlite::memory:');
-    ORM::set_db($db);
-    
     ORM::get_last_query();
     
     $utilisateur = new utilisateur();
     
     //echo '<pre>';var_dump($utilisateur);echo '</pre>';
     
-    $utilisateur->nom = 'jean-pierre';
-    $utilisateur->save();
+    //$utilisateur->name = 'jean-pierre';
+    //$utilisateur->save();
     
     echo ORM::get_last_query().'<br />';
     
-    $utilisateur->find_one(1);
-    var_dump($utilisateur->nom);
+    $utilisateur->find_one(3);
+    var_dump($utilisateur);
     echo '<br />';
     
-    $utilisateur->nom = 'bernard';
+    $utilisateur->name = 'bernard';
+    $utilisateur->surname = 'test';
+
     $utilisateur->save();
-    
+    var_dump($utilisateur->name);
+    var_dump($utilisateur->surname);
+    echo '<br />';    
     echo ORM::get_last_query().'<br />';  
     
 ?>
