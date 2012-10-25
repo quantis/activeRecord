@@ -233,10 +233,10 @@ class Model extends ORMWrapper
     // Default ID column for all models. Can be overridden by adding
     // a public static _id_column property to your model classes.
 
-    const DEFAULT_ID_COLUMN = 'pk';
+    const DEFAULT_ID_COLUMN = 'id';
 
     // Default foreign key suffix used by relationship methods
-    const DEFAULT_FOREIGN_KEY_SUFFIX = '_fk';
+    const DEFAULT_FOREIGN_KEY_SUFFIX = '_id';
 
     /**
      * The model's ignored attributes.
@@ -277,6 +277,14 @@ class Model extends ORMWrapper
      * @var string
      */
     public $relating_table;
+    
+    /**
+     * Improve performance with several caches
+     */
+    protected static $cache = array(
+        'className' => array(),
+        'tableName' => array()
+    );
 
     /**
      * Set the eagerly loaded models on the queryable model.
@@ -325,11 +333,15 @@ class Model extends ORMWrapper
      */
     protected static function _get_table_name($class_name)
     {
-        $specified_table_name = self::_get_static_property($class_name, '_table');
-        if (is_null($specified_table_name)) {
-            return self::_class_name_to_table_name($class_name);
+        if(!isset(self::$cache['tableName'][$class_name])){
+            
+            self::$cache['tableName'][$class_name] = $specified_table_name = self::_get_static_property($class_name, '_table');
+            
+            if (is_null(self::$cache['tableName'][$class_name]))
+                self::$cache['tableName'][$class_name] = self::_class_name_to_table_name($class_name);
         }
-        return $specified_table_name;
+        
+        return self::$cache['tableName'][$class_name];
     }
 
     /**
@@ -339,7 +351,11 @@ class Model extends ORMWrapper
      */
     protected static function _class_name_to_table_name($class_name)
     {
-        return strtolower(preg_replace('/(?<=[a-z])([A-Z])/', '_$1', $class_name));
+        //caching process
+        if(!isset(self::$cache['className'][$class_name]))
+            self::$cache['className'][$class_name] = strtolower(preg_replace('/(?<=[a-z])([A-Z])/', '_$1', $class_name));
+        
+        return self::$cache['className'][$class_name];
     }
 
     /**

@@ -186,9 +186,10 @@
          * Set up the database connection used by the class.
          */
         protected static function _setup_db() {
-            if (!is_object(self::$_db)) {
+            if (!(self::$_db instanceof PDO)) {
                 $db = new PDO(self::$_config['connection_string'], self::$_config['username'], self::$_config['password'], self::$_config['driver_options']);
                 $db->setAttribute(PDO::ATTR_ERRMODE, self::$_config['error_mode']);
+                
                 self::set_db($db);
                 
                 if (self::$_config['logging']) $query = self::get_db()->prepare("SET profiling = 1, profiling_history_size = 100")->execute();
