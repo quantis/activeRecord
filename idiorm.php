@@ -1111,7 +1111,7 @@
             elseif(method_exists($this, $key)){
                 $result = $this->$key();
             }
-            else  
+            else 
                 $result = false;
             
             return $result;

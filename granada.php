@@ -477,16 +477,18 @@ class Model extends ORMWrapper {
 		}
 		// Is the requested item a model relationship? If it is, we will dynamically
 		// load it and return the results of the relationship query.
-		elseif (method_exists($this, $key))
-		{
-			$relation = $this->$key();
-			return $this->ignore[$key] = (in_array($this->relating, array('has_one', 'belongs_to'))) ? $relation->find_one() : $relation->find_many();
-		}
-        else  
-            $result = false;
-	}
+		elseif (method_exists($this, $key)){
+		            if($key != self::_id_column_name(get_class($this))){
+                $relation = $this->$key();
+                return $this->ignore[$key] = (in_array($this->relating, array('has_one', 'belongs_to'))) ? $relation->find_one() : $relation->find_many();
+            }
+            else
+                return false;
+        }
+        else
+            return false;
     
-    
+        }
      /**
      * Set a property to a particular value on this object.
      * Flags that property as 'dirty' so it will be saved to the
