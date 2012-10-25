@@ -626,12 +626,12 @@ class ModelMapper extends Model
     
     protected static function _get_column_by_field($field_name)
     {
-        return (isset(self::$_aliases_fields_map[$field_name])) ? self::$_aliases_fields_map[$field_name] : $field_name;
+        return (isset(static::$_aliases_fields_map[$field_name])) ? static::$_aliases_fields_map[$field_name] : $field_name;
     }
     
     protected static function _get_field_by_column($column_name)
     {
-        return (isset(self::$_aliases_attributes_map[$column_name])) ? self::$_aliases_attributes_map[$column_name] : $column_name;
+        return (isset(static::$_aliases_attributes_map[$column_name])) ? static::$_aliases_attributes_map[$column_name] : $column_name;
     }
     
     /**
@@ -639,13 +639,16 @@ class ModelMapper extends Model
      */
     private static function _map_aliases()
     {
-        if(empty(self::$_aliases_attributes_map))
-            if(!empty(self::$_aliases_fields_map))
-                self::$_aliases_attributes_map = array_flip (self::$_aliases_fields_map);
+        if(empty(static::$_aliases_attributes_map))
+            if(!empty(static::$_aliases_fields_map))
+                static::$_aliases_attributes_map = array_flip (static::$_aliases_fields_map);
             
-        if(empty(self::$_aliases_fields_map))
-            if(!empty(self::$_aliases_attributes_map))
-                self::$_aliases_fields_map = array_flip (self::$_aliases_attributes_map);
+        if(empty(static::$_aliases_fields_map))
+            if(!empty(static::$_aliases_attributes_map))
+                static::$_aliases_fields_map = array_flip (static::$_aliases_attributes_map);
+            
+            var_dump(static::$_aliases_attributes_map);echo '<br />';
+            var_dump(static::$_aliases_fields_map);echo '<br />';
     }
     
     /**
@@ -654,37 +657,37 @@ class ModelMapper extends Model
     
     public function __get($key)
     {
-        self::_get_field_by_column($key);
+        $key = self::_get_field_by_column($key);
         return parent::__get($key);
     }
     
     public function get($key)
     {
-        self::_get_field_by_column($key);
+        $key = self::_get_field_by_column($key);
         return parent::get($key);
     }
     
     public function __set($key, $value)
     {
-        self::_get_column_by_field($key);
+        $key = self::_get_field_by_column($key);
         return parent::__set($key, $value);
     }
     
     public function set($key, $value)
     {
-        self::_get_column_by_field($key);
+        $key = self::_get_field_by_column($key);
         return parent::set($key, $value);
     }
     
     public function __isset($key)
     {
-        self::_get_field_by_column($key);
+        $key = self::_get_field_by_column($key);
         return parent::__isset($key);
     }
     
     public function __unset($key)
     {
-        self::_get_column_by_field($key);
+        $key = self::_get_field_by_column($key);
         return parent::__unset($key);
     }
     
