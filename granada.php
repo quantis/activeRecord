@@ -607,3 +607,72 @@ class None extends Model
     }
 
 }
+
+class ModelMapper extends Model
+{
+    
+    public static $_aliases_fields_map = array();
+    
+    public static $_aliases_attributes_map = array();
+    
+    public function __construct()
+    {
+        self::_map_aliases();
+        parent::__construct();
+    }
+    
+    protected static function _get_column_by_field($field_name)
+    {
+        return (isset(self::$_aliases_fields_map[$field_name])) ? self::$_aliases_fields_map[$field_name] : $field_name;
+    }
+    
+    protected static function _get_field_by_column($column_name)
+    {
+        return (isset(self::$_aliases_attributes_map[$column_name])) ? self::$_aliases_attributes_map[$column_name] : $column_name;
+    }
+    
+    /**
+     * populate aliases mapping by revert key/values from the other mapping
+     */
+    private static function _map_aliases()
+    {
+        if(empty(self::$_aliases_attributes_map))
+            if(!empty(self::$_aliases_fields_map))
+                self::$_aliases_attributes_map = array_flip (self::$_aliases_fields_map);
+            
+        if(empty(self::$_aliases_fields_map))
+            if(!empty(self::$_aliases_attributes_map))
+                self::$_aliases_fields_map = array_flip (self::$_aliases_attributes_map);
+    }
+    
+    /**
+     * MAGIC METHODS REPLACEMENT
+     */
+    
+    public function __get($key)
+    {
+        self::_get_field_by_column($key);
+        return parent::__get($key);
+    }
+    
+    public function __set($key, $value)
+    {
+        self::_get_column_by_field($key);
+        return parent::__set($key, $value);
+    }
+    
+    public function __isset($key)
+    {
+        self::_get_field_by_column($key);
+        return parent::__isset($key);
+    }
+    
+    public function __unset($key)
+    {
+        self::_get_column_by_field($key);
+        return parent::__unset($key);
+    }
+    
+
+    
+}
