@@ -367,23 +367,6 @@ class Model extends ORMWrapper
     }
 
     /**
-     * Retrieve the value of a static property on a class. If the
-     * class or the property does not exist, returns the default
-     * value supplied as the third argument (which defaults to null).
-     */
-    protected static function _get_static_property($class_name, $property, $default = null)
-    {
-        if(!isset(static::$$property)) return $default;
-        
-        return static::$$property;
-        if (!class_exists($class_name) || !property_exists($class_name, $property)) {
-            return $default;
-        }
-        $properties = get_class_vars($class_name);
-        return $properties[$property];
-    }
-
-    /**
      * Static method to get a table name given a class name.
      * If the supplied class has a public static property
      * named $_table, the value of this property will be
@@ -392,13 +375,8 @@ class Model extends ORMWrapper
      */
     protected static function _get_table_name($class_name)
     {
-        if(!isset(self::$cache['tableName'][$class_name])){
-            
-            self::$cache['tableName'][$class_name] = $specified_table_name = self::_get_static_property($class_name, '_table');
-            
-            if (is_null(self::$cache['tableName'][$class_name]))
-                self::$cache['tableName'][$class_name] = self::_class_name_to_table_name($class_name);
-        }
+        if(!isset(self::$cache['tableName'][$class_name]))  
+            self::$cache['tableName'][$class_name] = (isset(static::$_table)) ? static::$_table : self::_class_name_to_table_name($class_name);
         
         return self::$cache['tableName'][$class_name];
     }
@@ -423,7 +401,7 @@ class Model extends ORMWrapper
      */
     protected static function _id_column_name($class_name)
     {
-        return self::_get_static_property($class_name, '_id_column', self::DEFAULT_ID_COLUMN);
+        return (isset(static::$_id_column)) ? static::$_id_column : self::DEFAULT_ID_COLUMN;
     }
 
     /**
