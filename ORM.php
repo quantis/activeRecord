@@ -1,4 +1,7 @@
 <?php
+
+namespace Quantis\DataBase\ActiveRecord;
+
     /**
      * @author Erik Wiesenthal
      * @email erikwiesenthal@hotmail.com
