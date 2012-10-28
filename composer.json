@@ -1,0 +1,20 @@
+{
+    "name": "Quantis/ActiveRecord",
+    "type": "library",
+    "description": "Lightweight, less is more, php activeRecord implémentation. Based on Granada, with composer integration.",
+    "keywords": ["db","activeRecord", "PDO", "DAO", "ORM"],
+    "homepage": "https://github.com/quantis/activeRecord",
+    "license": "GNU GPL v2",
+    "authors": [
+        {
+            "name": "Arnaud LEMAIRE",
+            "email": "a.lemaire@quantis.fr",
+            "homepage": "https://github.com/lilobase",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0"
+    },
+    "target-dir": "Quantis/Database/ActiveRecord"
+}
