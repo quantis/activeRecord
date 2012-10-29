@@ -1,7 +1,7 @@
 {
-    "name": "quantis/activerecord",
+    "name": "quantis/active-record",
     "type": "library",
-    "description": "Lightweight, less is more, php activeRecord implémentation. Based on Granada, with composer integration.",
+    "description": "Lightweight, less is more, php activeRecord implementation. Based on Granada, with composer integration.",
     "keywords": ["db","activeRecord", "PDO", "DAO", "ORM"],
     "homepage": "https://github.com/quantis/activeRecord",
     "license": "GNU GPL v2",
