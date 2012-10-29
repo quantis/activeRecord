@@ -1,5 +1,5 @@
 {
-    "name": "Quantis/ActiveRecord",
+    "name": "quantis/activerecord",
     "type": "library",
     "description": "Lightweight, less is more, php activeRecord implémentation. Based on Granada, with composer integration.",
     "keywords": ["db","activeRecord", "PDO", "DAO", "ORM"],
